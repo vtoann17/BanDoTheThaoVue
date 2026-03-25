@@ -19,7 +19,9 @@ export const useAuth = defineStore("auth", () => {
 
       if (res.status === 200 || res.status === 201) {
         notify.toastSuccess("Đăng ký thành công");
-        router.push("/login");
+        setTimeout(() => {
+          router.push("/auth/login");
+        }, 1000);
       }
     } catch (error) {
       notify.toastError(error.response?.data?.message || "Đăng ký thất bại");
@@ -51,6 +53,18 @@ export const useAuth = defineStore("auth", () => {
       );
       console.log("Login error:", error);
     }
+  };
+  const loginGoogle = async (token) => {
+    auth.value = { token };
+    localStorage.setItem("auth", JSON.stringify({ token }));
+
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    axios.defaults.headers.common["Accept"] = "application/json";
+
+    notify.toastSuccess("Đăng nhập Google thành công");
+
+    await getUser();
+    router.push("/");
   };
 
   const logout = async () => {
@@ -116,5 +130,6 @@ export const useAuth = defineStore("auth", () => {
     login,
     logout,
     getUser,
+    loginGoogle
   };
 });
