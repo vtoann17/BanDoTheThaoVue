@@ -1,4 +1,4 @@
-<script setup>
+<!-- <script setup>
 // có thể import auth sau nếu cần login/logout
 </script>
 
@@ -21,4 +21,4 @@
       </nav>
     </div>
   </header>
-</template>
+</template> -->
