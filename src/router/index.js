@@ -6,14 +6,14 @@ import AuthCallback from '@/views/auth/AuthCallback.vue'
 import ForgotPassword from '@/views/auth/ForgotPassword.vue'
 import VerifyOtp from '@/views/auth/VerifyOtp.vue'
 import ResetPassword from '@/views/auth/ResetPassword.vue'
-
+import IndexView from '../views/index.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
       name: 'home',
-      component: HomeView,
+      component: IndexView,
     },
     {
       path: "/auth/register", // đường dẫn URL
