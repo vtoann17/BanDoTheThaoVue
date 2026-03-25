@@ -1,14 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import Register from '@/views/Register.vue'
-
+import Index from '@/views/index.vue'
+import IndexView from '../views/index.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
       name: 'home',
-      component: HomeView,
+      component: IndexView,
     },
     {
       path: "/register", // đường dẫn URL

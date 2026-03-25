@@ -1,7 +1,8 @@
 <script setup>
 import MainLayout from './layouts/MainLayout.vue';
+import Index from './views/index.vue';
 </script>
 
 <template>
-  <MainLayout />
+  <router-view />
 </template>
