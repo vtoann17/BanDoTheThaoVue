@@ -10,6 +10,14 @@ import IndexView from '../views/index.vue'
 import ProductView from '@/views/ProductView.vue'
 import ProductdetailView from '@/views/ProductdetailView.vue'
 import Checkout from '@/components/Checkout.vue'
+import ProductAdmin from '@/views/admin/ProductAdmin.vue'
+import ProductAdd from '@/views/admin/ProductAdd.vue'
+import CategoryAdmin from '@/views/admin/CategoryAdmin.vue'
+import CategoryAdd from '@/views/admin/CategoryAdd.vue'
+import Profile from '@/views/user/Profile.vue'
+import ChangePassword from '@/views/user/ChangePassword.vue'
+import Order from '@/views/user/Order.vue'
+import Address from '@/views/user/Address.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -37,6 +45,48 @@ const router = createRouter({
       path: "/checkout", // đường dẫn URL
       name: "checkout",
       component: Checkout, // component bạn tạo
+    },
+    {
+      path: "/productadmin", // đường dẫn URL
+      name: "productadmin",
+      component: ProductAdmin, // component bạn tạo
+    },
+    {
+      path: "/productadd", // đường dẫn URL
+      name: "productadd",
+      component: ProductAdd, // component bạn tạo
+    },
+    {
+      path: "/categoryadmin", // đường dẫn URL
+      name: "categoryadmin",
+      component: CategoryAdmin, // component bạn tạo
+    },
+    {
+      path: "/categoryadd", // đường dẫn URL
+      name: "categoryadd",
+      component: CategoryAdd, // component bạn tạo
+    },
+    {
+      path: "/profile", // đường dẫn URL
+      name: "profile",
+      component: Profile, // component bạn tạo
+    },
+    {
+      path: "/changepassword", // đường dẫn URL
+      name: "changepassword",
+      component: ChangePassword, // component bạn tạo
+    },
+    {
+      path: "/order", // đường dẫn URL
+      name: "order",
+      component: Order, // component bạn tạo
+    },
+    {
+      path: "/address", // đường dẫn URL
+      name: "address",
+      component: Address, // component bạn tạo
+    },
+    {
       path: "/auth/login", // đường dẫn URL
       name: "login",
       component: Login, // component bạn tạo
