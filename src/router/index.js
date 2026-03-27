@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import Register from '@/views/auth/Register.vue'
 import Login from '@/views/auth/Login.vue'
+import Logout from '@/views/auth/Logout.vue'
 import AuthCallback from '@/views/auth/AuthCallback.vue'
 import ForgotPassword from '@/views/auth/ForgotPassword.vue'
 import VerifyOtp from '@/views/auth/VerifyOtp.vue'
@@ -18,6 +19,9 @@ import Profile from '@/views/user/Profile.vue'
 import ChangePassword from '@/views/user/ChangePassword.vue'
 import Order from '@/views/user/Order.vue'
 import Address from '@/views/user/Address.vue'
+import Forbidden from '@/views/errors/Forbidden.vue'
+import { useAuth } from "@/stores/auth";
+import { useNotify } from "@/composables/useNotify";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -25,6 +29,11 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: IndexView,
+    },
+    {
+      path: '/403',
+      name: 'forbidden',
+      component: Forbidden,
     },
     {
       path: "/auth/register", // đường dẫn URL
@@ -47,49 +56,68 @@ const router = createRouter({
       component: Checkout, // component bạn tạo
     },
     {
-      path: "/productadmin", // đường dẫn URL
+      path: "/productadmin",
       name: "productadmin",
-      component: ProductAdmin, // component bạn tạo
+      component: ProductAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/productadd", // đường dẫn URL
+      path: "/productadd",
       name: "productadd",
-      component: ProductAdd, // component bạn tạo
+      component: ProductAdd,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/categoryadmin", // đường dẫn URL
+      path: "/categoryadmin",
       name: "categoryadmin",
-      component: CategoryAdmin, // component bạn tạo
+      component: CategoryAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/categoryadd", // đường dẫn URL
+      path: "/categoryadd",
       name: "categoryadd",
-      component: CategoryAdd, // component bạn tạo
+      component: CategoryAdd,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/profile", // đường dẫn URL
+      path: "/profile",
       name: "profile",
-      component: Profile, // component bạn tạo
+      component: Profile,
+      meta: { requiresAuth: true }
     },
     {
-      path: "/changepassword", // đường dẫn URL
+      path: "/changepassword",
       name: "changepassword",
-      component: ChangePassword, // component bạn tạo
+      component: ChangePassword,
+      meta: { requiresAuth: true }
     },
     {
-      path: "/order", // đường dẫn URL
+      path: "/order",
       name: "order",
-      component: Order, // component bạn tạo
+      component: Order,
+      meta: { requiresAuth: true }
     },
     {
-      path: "/address", // đường dẫn URL
+      path: "/address",
       name: "address",
-      component: Address, // component bạn tạo
+      component: Address,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: "/checkout",
+      name: "checkout",
+      component: Checkout,
+      meta: { requiresAuth: true }
     },
     {
       path: "/auth/login", // đường dẫn URL
       name: "login",
       component: Login, // component bạn tạo
+    },
+    {
+      path: "/auth/logout", // đường dẫn URL
+      name: "logout",
+      component: Logout, // component bạn tạo
     },
     {
       path: "/auth/callback", // đường dẫn URL
@@ -121,5 +149,28 @@ const router = createRouter({
     },
   ],
 })
+
+
+router.beforeEach(async (to, from) => {
+  const auth = JSON.parse(localStorage.getItem("auth") || "null");
+  const authStore = useAuth();
+  const notify = useNotify();
+
+  if (auth && !authStore.user) {
+    await authStore.getUser();
+  }
+
+  if (to.meta.requiresAuth && !auth) {
+    notify.toastError("Bạn cần đăng nhập!");
+    return "/auth/login";
+  }
+
+  if (to.meta.requiresAdmin && authStore.user?.role !== "admin") {
+    notify.toastError("Bạn không có quyền!");
+    return "/403";
+  }
+
+  return true;
+});
 
 export default router

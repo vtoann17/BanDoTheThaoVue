@@ -92,7 +92,6 @@ export const useAuth = defineStore("auth", () => {
     localStorage.removeItem("auth");
     auth.value = null;
     user.value = null;
-    router.push("/login");
   };
 
   const getUser = async () => {
