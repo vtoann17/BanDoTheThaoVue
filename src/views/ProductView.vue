@@ -1,5 +1,7 @@
 <script setup>
+import AppFooter from '@/components/AppFooter.vue';
 import { ref, computed } from 'vue'
+import AppHeader from '../components/AppHeader.vue';
 
 const brands = ref([
   { id: 1, name: 'Nike',          checked: true },
@@ -8,7 +10,6 @@ const brands = ref([
   { id: 4, name: 'Under Armour',  checked: false },
 ])
 
-const sizes = ['US 7','US 8','US 9','US 10','US 11','US 12']
 const selectedSize = ref('US 8')
 
 const colors = [
@@ -50,34 +51,7 @@ const pages = [1,2,3,'...',12]
 <template>
   <div class="app">
 
-    <!-- ══ NAVBAR ══ -->
-    <nav class="navbar">
-      <div class="nav-left">
-        <div class="brand">
-          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="6" fill="#1D4ED8"/>
-            <path d="M6 24L14 8l4 8 4-8 8 16" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span>EliteSport</span>
-        </div>
-        <a href="#" class="nav-link">Cửa hàng</a>
-        <a href="#" class="nav-link">Đội ngũ</a>
-        <a href="#" class="nav-link sale-link">Giảm giá</a>
-      </div>
-      <div class="nav-right">
-        <div class="search-box">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" placeholder="Tìm kiếm sản phẩm..."/>
-        </div>
-        <button class="icon-btn pos-rel">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          <span class="nav-badge">2</span>
-        </button>
-        <button class="icon-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
-      </div>
-    </nav>
+  <AppHeader/>
 
     <!-- ══ BREADCRUMB ══ -->
     <div class="breadcrumb">
@@ -244,57 +218,10 @@ const pages = [1,2,3,'...',12]
     </div>
 
     <!-- ══ FOOTER TOP ══ -->
-    <div class="footer-top">
-      <div class="ft-col">
-        <h4>MUA SẮM</h4>
-        <a href="#">Giày thể thao</a>
-        <a href="#">Quần áo tập</a>
-        <a href="#">Phụ kiện gym</a>
-        <a href="#">Hàng mới về</a>
-      </div>
-      <div class="ft-col">
-        <h4>HỖ TRỢ</h4>
-        <a href="#">Giao hàng tận nơi</a>
-        <a href="#">Chính sách đổi trả</a>
-        <a href="#">Tra cứu đơn hàng</a>
-        <a href="#">Liên hệ chúng tôi</a>
-      </div>
-      <div class="ft-col">
-        <h4>CÔNG TY</h4>
-        <a href="#">Về EliteSport</a>
-        <a href="#">Cơ hội nghề nghiệp</a>
-        <a href="#">Chính sách bảo mật</a>
-        <a href="#">Điều khoản sử dụng</a>
-      </div>
-      <div class="ft-col newsletter-col">
-        <h4>BẢN TIN</h4>
-        <p>Nhận ưu đãi sớm nhất và tin tức về sản phẩm mới hàng tuần.</p>
-        <div class="newsletter-row">
-          <input type="email" placeholder="Email của bạn"/>
-          <button class="btn-subscribe">ĐĂNG KÝ</button>
-        </div>
-      </div>
-    </div>
+    
 
     <!-- ══ FOOTER BOTTOM ══ -->
-    <div class="footer-bottom">
-      <div class="footer-brand-sm">
-        <svg width="18" height="18" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="6" fill="#1D4ED8"/><path d="M6 24L14 8l4 8 4-8 8 16" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>EliteSport</span>
-      </div>
-      <span class="copyright">© 2024 ELITESPORT. BẢN QUYỀN ĐƯỢC BẢO LƯU.</span>
-      <div class="footer-icons">
-        <button class="fi-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        </button>
-        <button class="fi-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </button>
-        <button class="fi-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        </button>
-      </div>
-    </div>
+    <AppFooter/>
 
   </div>
 </template>
@@ -357,7 +284,7 @@ img{display:block;width:100%;height:100%;object-fit:cover}
   display:flex;justify-content:space-between;align-items:flex-end;
   padding:0 32px 24px;
 }
-.page-title{font-size:28px;font-weight:800;color:#111827;line-height:1.1}
+.page-title{font-size:28px;color:#111827;line-height:1.1}
 .page-sub{font-size:13.5px;color:#6B7280;margin-top:6px}
 .sort-wrap{display:flex;align-items:center;gap:8px;font-size:13.5px}
 .sort-label{color:#6B7280}
@@ -390,7 +317,7 @@ img{display:block;width:100%;height:100%;object-fit:cover}
 .filter-block{margin-bottom:0}
 .filter-title{
   display:flex;align-items:center;gap:7px;
-  font-size:11.5px;font-weight:800;letter-spacing:.6px;color:#111827;
+  font-size:11.5px;letter-spacing:.6px;color:#111827;
   margin-bottom:14px;
 }
 .check-row{

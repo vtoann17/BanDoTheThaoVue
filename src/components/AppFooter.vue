@@ -1,3 +1,10 @@
+<script setup>
+const footerStore   = ['Đồ Nam', 'Đồ Nữ', 'Trẻ em', 'Phụ kiện']
+const footerSupport = ['Trạng thái đơn hàng', 'Trả hàng', 'Vận chuyển', 'Liên hệ']
+const footerPolicy  = ['Bảo mật', 'Điều khoản', 'Cookies']
+const sizes = ['US 7','US 8','US 9','US 10','US 11','US 12']
+</script>
+
 <template>
      <footer class="footer">
     <div class="footer-grid">

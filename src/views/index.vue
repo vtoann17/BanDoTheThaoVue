@@ -1,9 +1,19 @@
 <script setup>
 import AppHeader from "../components/AppHeader.vue"
 import AppFooter from '../components/AppFooter.vue';
+import ProductList from "../components/ProductList.vue";
 import { onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
+
+const categories = [
+  { id: 1, name: 'Giày chạy bộ',    icon: 'bi-wind',            count: '120+ sản phẩm', color: '#EFF6FF', accent: '#1565C0' },
+  { id: 2, name: 'Áo thể thao',     icon: 'bi-person-arms-up',  count: '85+ sản phẩm',  color: '#FFF7ED', accent: '#FF6D00' },
+  { id: 3, name: 'Quần tập luyện',  icon: 'bi-stars',           count: '60+ sản phẩm',  color: '#F0FDF4', accent: '#16A34A' },
+  { id: 4, name: 'Bóng & dụng cụ', icon: 'bi-dribbble',        count: '95+ sản phẩm',  color: '#FDF4FF', accent: '#9333EA' },
+  { id: 5, name: 'Phụ kiện',        icon: 'bi-bag-heart',       count: '200+ sản phẩm', color: '#FFF1F2', accent: '#E11D48' },
+  { id: 6, name: 'Thiết bị gym',    icon: 'bi-trophy',          count: '40+ sản phẩm',  color: '#FFFBEB', accent: '#D97706' },
+]
 
 const products = [
   { id: 1, cat: 'CHẠY BỘ CHUYÊN NGHIỆP', name: 'SpeedMax Elite 5',  price: '4.500.000₫', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' },
@@ -54,38 +64,37 @@ onMounted(() => {
     </div>
   </section>
 
-  <!-- ── HÀNG MỚI VỀ ── -->
-  <section class="section">
+  <!-- ── DANH MỤC SẢN PHẨM ── -->
+  <section class="section categories-section">
     <div class="section-head">
       <div>
-        <h2 class="section-title">Hàng Mới Về</h2>
+        <h2 class="section-title">Danh Mục Sản Phẩm</h2>
         <div class="title-bar"></div>
       </div>
       <a href="#" class="see-all">Xem tất cả &nbsp;→</a>
     </div>
 
-    <div class="products-grid">
-      <div v-for="p in products" :key="p.id" class="product-card">
-        <div class="prod-img-wrap">
-          <img :src="p.img" :alt="p.name" loading="lazy"/>
+    <div class="categories-grid">
+      <a
+        v-for="cat in categories"
+        :key="cat.id"
+        href="#"
+        class="cat-card"
+        :style="{ '--cat-bg': cat.color, '--cat-accent': cat.accent }"
+      >
+        <div class="cat-icon-wrap">
+          <i :class="['bi', cat.icon, 'cat-icon']"></i>
         </div>
-        <div class="prod-body">
-          <p class="prod-cat">{{ p.cat }}</p>
-          <p class="prod-name">{{ p.name }}</p>
-          <div class="prod-foot">
-            <span class="prod-price">{{ p.price }}</span>
-            <button class="cart-btn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                <line x1="3" y1="6" x2="21" y2="6"/>
-                <path d="M16 10a4 4 0 0 1-8 0"/>
-              </svg>
-            </button>
-          </div>
+        <div class="cat-info">
+          <p class="cat-name">{{ cat.name }}</p>
+          <p class="cat-count">{{ cat.count }}</p>
         </div>
-      </div>
+        <span class="cat-arrow">→</span>
+      </a>
     </div>
   </section>
+
+  <ProductList/>
 
   <!-- ── MUA SẮM THEO MÔN THỂ THAO ── -->
   <section class="section sports-section">
@@ -115,91 +124,6 @@ a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; border: none; }
 ul { list-style: none; }
 img { display: block; width: 100%; }
-
-/* ── TOKENS ── */
-/* --blue:#1565C0  --blue2:#1976D2  --orange:#FF6D00
-   --dark:#111827  --gray:#6B7280   --bg-light:#F3F4F6
-   --footer:#1a1f2e                                    */
-
-/* ──────────────────────────────────────────────────── */
-/*  NAVBAR                                             */
-/* ──────────────────────────────────────────────────── */
-.navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 64px;
-  padding: 0 48px;
-  background: #fff;
-  border-bottom: 1px solid #E5E7EB;
-  position: sticky;
-  top: 0;
-  z-index: 200;
-}
-
-.nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  font-size: 17px;
-  color: #1565C0;
-}
-
-.nav-links {
-  display: flex;
-  gap: 32px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-.nav-links a:hover { color: #1565C0; }
-.nav-links .sale { color: #FF6D00; font-weight: 600; }
-
-.nav-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #9CA3AF;
-  width: 210px;
-}
-
-.icon-btn {
-  position: relative;
-  background: none;
-  border: none;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.badge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: #1565C0;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 /* ──────────────────────────────────────────────────── */
 /*  HERO                                               */
@@ -309,6 +233,89 @@ img { display: block; width: 100%; }
   white-space: nowrap;
 }
 .see-all:hover { text-decoration: underline; }
+
+/* ──────────────────────────────────────────────────── */
+/*  CATEGORIES                                          */
+/* ──────────────────────────────────────────────────── */
+.categories-section {
+  border-top: 1px solid #E5E7EB;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+.cat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 14px 16px;
+  background: var(--cat-bg);
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  text-align: center;
+  transition: transform .22s, box-shadow .22s, border-color .22s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.cat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0,0,0,.08);
+  border-color: var(--cat-accent);
+}
+
+.cat-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  transition: transform .22s;
+}
+.cat-card:hover .cat-icon-wrap { transform: scale(1.1); }
+
+.cat-icon {
+  font-size: 28px;
+  line-height: 1;
+  color: var(--cat-accent);
+}
+
+.cat-info { flex: 1; }
+
+.cat-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
+.cat-count {
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.cat-arrow {
+  font-size: 13px;
+  color: var(--cat-accent);
+  font-weight: 700;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity .2s, transform .2s;
+}
+.cat-card:hover .cat-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
 
 /* ──────────────────────────────────────────────────── */
 /*  PRODUCTS                                            */
@@ -484,7 +491,6 @@ img { display: block; width: 100%; }
   overflow: hidden;
 }
 
-/* decorative circles */
 .deco {
   position: absolute;
   border-radius: 50%;
@@ -529,9 +535,4 @@ img { display: block; width: 100%; }
   transition: transform .2s, box-shadow .2s;
 }
 .btn-promo:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
-
-/* ──────────────────────────────────────────────────── */
-/*  FOOTER                                              */
-/* ──────────────────────────────────────────────────── */
-
 </style>
