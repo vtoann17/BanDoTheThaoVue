@@ -1,8 +1,8 @@
 <script setup>
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import AdminLayout from "../../layouts/AdminLayout.vue";
-import { useCategories } from "../../stores/categories";
+import AdminLayout from "../../../layouts/AdminLayout.vue";
+import { useCategories } from "../../../stores/categories";
 import { useNotify } from "@/composables/useNotify";
 
 const router = useRouter();
