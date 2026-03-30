@@ -16,7 +16,7 @@
         </svg>
       </div>
       <div class="logo-text">
-        <span class="brand-name">SportGear</span>
+        <span class="brand-name">THBA</span>
         <span class="brand-sub">Hệ thống Quản trị</span>
       </div>
     </div>
@@ -27,7 +27,7 @@
         Trang chủ
       </router-link>
 
-      <router-link to="/" class="nav-item">
+      <router-link to="/dashboar" class="nav-item">
         <i class="bi bi-speedometer2"></i>
         Tổng quan
       </router-link>
@@ -42,7 +42,7 @@
         Danh mục
       </router-link>
 
-      <router-link to="/order" class="nav-item">
+      <router-link to="/" class="nav-item">
         <i class="bi bi-cart"></i>
         Đơn hàng
       </router-link>

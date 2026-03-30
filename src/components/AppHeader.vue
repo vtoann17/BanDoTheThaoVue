@@ -17,26 +17,12 @@ const toggleDropdown = () => {
   <nav class="navbar">
     <div class="nav-logo">
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <rect width="28" height="28" rx="6" fill="#1565C0" />
-        <path
-          d="M7 21L14 7l7 14"
-          stroke="#fff"
-          stroke-width="2.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        />
-        <path
-          d="M9 17h10"
-          stroke="#fff"
-          stroke-width="2"
-          stroke-linecap="round"
-        />
       </svg>
-      ProSports
+      THBA
     </div>
 
     <div class="nav-links">
-      <a href="#">Sản phẩm</a>
+      <a href="product">Sản phẩm</a>
       <a href="#">Môn thể thao</a>
       <a href="#">Hàng mới về</a>
       <a href="#" class="sale">Giảm giá</a>
@@ -92,7 +78,7 @@ const toggleDropdown = () => {
 
         <div v-if="showDropdown" class="dropdown">
           <template v-if="authStore.user.role === 'admin'">
-            <a href="/productadmin">Quản lý</a>
+            <a href="/dashboar">Quản lý</a>
             <a href="#" class="logout" @click="$router.push('/auth/logout')">Đăng xuất</a>
           </template>
 

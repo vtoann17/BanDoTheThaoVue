@@ -1,43 +1,124 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
 import AdminLayout from "../../layouts/AdminLayout.vue";
-// Các SVG Icon được chuẩn bị sẵn khớp với ảnh thiết kế
-const iconShoe = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.07 4.93a10 10 0 0 0-14.14 0l-1.42 1.41a10 10 0 0 0 0 14.15h0a10 10 0 0 0 14.15 0l1.41-1.42a10 10 0 0 0 0-14.14z"></path><path d="M22 22A10 10 0 0 0 12 12M12 12A10 10 0 0 0 2 2M12 12A10 10 0 0 1 2 22M12 12A10 10 0 0 1 22 2"></path></svg>`; // Mô phỏng tạm icon giày
-const iconShirt = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.47a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.47a2 2 0 00-1.34-2.23z"></path></svg>`;
-const iconSearch = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
-const iconBall = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M5.636 5.636a9 9 0 0112.728 0M12 2v20M2 12h20M5.636 18.364a9 9 0 0112.728 0"></path></svg>`;
+import { useCategories } from "@/stores/categories";
+import { useNotify } from "@/composables/useNotify";
 
-const categories = ref([
-  {
-    id: "#1",
-    name: "Giày đá bóng",
-    slug: "giay-da-bong",
-    date: "01/10/2023",
-    iconSvg: iconShoe,
-  },
-  {
-    id: "#2",
-    name: "Áo thi đấu",
-    slug: "ao-thi-dau",
-    date: "02/10/2023",
-    iconSvg: iconShirt,
-  },
-  {
-    id: "#3",
-    name: "Phụ kiện",
-    slug: "phu-kien",
-    date: "05/10/2023",
-    iconSvg: iconSearch,
-  },
-  {
-    id: "#4",
-    name: "Bóng thi đấu",
-    slug: "bong-thi-dau",
-    date: "10/10/2023",
-    iconSvg: iconBall,
-  },
-]);
+const router = useRouter();
+const notify = useNotify();
+const categoryStore = useCategories();
+
+const search = ref("");
+const apiBase = import.meta.env.VITE_API_BASE;
+
+const statusFilter = ref("");
+const sortKey = ref("id"); 
+const sortDir = ref("asc"); 
+
+const currentPage = ref(1);
+const perPage = 4; 
+
+onMounted(async () => {
+  await categoryStore.loadCategories();
+});
+
+function toggleSort(key) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === "asc" ? "desc" : "asc";
+  } else {
+    sortKey.value = key;
+    sortDir.value = "asc";
+  }
+  currentPage.value = 1;
+}
+
+function sortIcon(key) {
+  if (sortKey.value !== key) return "↕";
+  return sortDir.value === "asc" ? "↑" : "↓";
+}
+
+const filteredSortedCategories = computed(() => {
+  let list = [...categoryStore.categories];
+
+
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase();
+    list = list.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.slug.toLowerCase().includes(q)
+    );
+  }
+
+  if (statusFilter.value === "active") {
+    list = list.filter((c) => c.status === "active" || c.is_active);
+  } else if (statusFilter.value === "inactive") {
+    list = list.filter((c) => c.status !== "active" && !c.is_active);
+  }
+
+  list.sort((a, b) => {
+    let va = a[sortKey.value] ?? "";
+    let vb = b[sortKey.value] ?? "";
+    if (typeof va === "string") va = va.toLowerCase();
+    if (typeof vb === "string") vb = vb.toLowerCase();
+    if (va < vb) return sortDir.value === "asc" ? -1 : 1;
+    if (va > vb) return sortDir.value === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  return list;
+});
+
+const totalItems = computed(() => filteredSortedCategories.value.length);
+const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / perPage)));
+
+const paginatedCategories = computed(() => {
+  const start = (currentPage.value - 1) * perPage;
+  return filteredSortedCategories.value.slice(start, start + perPage);
+});
+
+const pageNumbers = computed(() => {
+  const pages = [];
+  for (let i = 1; i <= totalPages.value; i++) pages.push(i);
+  return pages;
+});
+
+function goPage(p) {
+  if (p < 1 || p > totalPages.value) return;
+  currentPage.value = p;
+}
+
+function onSearchInput() { currentPage.value = 1; }
+function onStatusChange() { currentPage.value = 1; }
+
+async function handleDelete(id) {
+  const confirmed = await notify.swalConfirm(
+    "Bạn có muốn xóa không?",
+    "Hành động này không thể hoàn tác"
+  );
+  if (!confirmed) return;
+
+  const result = await categoryStore.deleteCategory(id);
+  if (result) {
+    notify.toastSuccess("Xóa danh mục thành công");
+  } else {
+    notify.toastError("Lỗi không xóa được danh mục");
+  }
+}
+
+function goToAdd() { router.push("/categoryadd"); }
+function goToEdit(id) { router.push(`/categoryedit/${id}`); }
+
+function imageUrl(path) {
+  if (!path) return null;
+  return `${apiBase.replace("/api", "")}/storage/${path}`;
+}
+
+const rangeStart = computed(() => totalItems.value === 0 ? 0 : (currentPage.value - 1) * perPage + 1);
+const rangeEnd   = computed(() => Math.min(currentPage.value * perPage, totalItems.value));
 </script>
+
 <template>
   <AdminLayout>
     <div class="content-header">
@@ -45,71 +126,48 @@ const categories = ref([
         <h2>Quản lý Danh mục</h2>
         <p>Xem và quản lý các danh mục sản phẩm trong cửa hàng của bạn.</p>
       </div>
-      <button class="btn-add">
+      <button class="btn-add" @click="goToAdd">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-          ></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
         Thêm danh mục mới
       </button>
     </div>
 
     <div class="data-card">
+      <!-- Filter bar -->
       <div class="filter-bar">
         <div class="filter-search-box">
-          <svg
-            class="search-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            ></path>
+          <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
           <input
             type="text"
             placeholder="Tìm kiếm danh mục..."
             class="filter-input"
+            v-model="search"
+            @input="onSearchInput"
           />
         </div>
 
+        <!-- Status dropdown -->
         <div class="filter-select-box">
-          <select class="filter-select">
-            <option>Trạng thái</option>
-            <option>Đang hoạt động</option>
-            <option>Bị ẩn</option>
+          <select class="filter-select" v-model="statusFilter" @change="onStatusChange">
+            <option value="">Trạng thái</option>
+            <option value="active">Hoạt động</option>
+            <option value="inactive">Ẩn</option>
           </select>
-          <svg
-            class="dropdown-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 9l-7 7-7-7"
-            ></path>
+          <svg class="select-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </div>
 
-        <button class="btn-filter">
+        <!-- Filter icon button -->
+        <button class="btn-filter-icon" title="Lọc nâng cao">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            ></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 4h18M7 10h10M11 16h2"/>
           </svg>
         </button>
       </div>
@@ -118,84 +176,134 @@ const categories = ref([
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width: 80px">ID <span class="sort-icon">↕</span></th>
-              <th>TÊN DANH MỤC <span class="sort-icon">↕</span></th>
+              <th style="width:80px" class="sortable" @click="toggleSort('id')">
+                ID <span class="sort-icon" :class="{ active: sortKey === 'id' }">{{ sortIcon('id') }}</span>
+              </th>
+              <th class="sortable" @click="toggleSort('name')">
+                TÊN DANH MỤC <span class="sort-icon" :class="{ active: sortKey === 'name' }">{{ sortIcon('name') }}</span>
+              </th>
               <th>SLUG</th>
-              <th>NGÀY TẠO <span class="sort-icon">↕</span></th>
+              <!-- <th class="sortable" @click="toggleSort('created_at')">
+                NGÀY TẠO <span class="sort-icon" :class="{ active: sortKey === 'created_at' }">{{ sortIcon('created_at') }}</span>
+              </th> -->
               <th class="text-right">THAO TÁC</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(category, index) in categories" :key="index">
-              <td class="font-medium text-gray">{{ category.id }}</td>
-              <td>
-                <div class="category-name-wrapper">
-                  <div
-                    class="category-icon-box"
-                    v-html="category.iconSvg"
-                  ></div>
-                  <span class="font-bold">{{ category.name }}</span>
+            <!-- Empty: chưa có dữ liệu -->
+            <tr v-if="categoryStore.categories.length === 0">
+              <td colspan="5" class="empty-row">
+                <div class="empty-state">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="40" height="40">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                  </svg>
+                  <p>Chưa có danh mục nào</p>
                 </div>
               </td>
+            </tr>
+
+            <tr v-for="cat in paginatedCategories" :key="cat.id">
+              <td class="font-medium text-gray">#{{ cat.id }}</td>
+
+              <!-- Tên + ảnh nhỏ inline -->
               <td>
-                <span class="slug-badge">{{ category.slug }}</span>
+                <div class="name-cell">
+                  <img
+                    v-if="cat.image"
+                    :src="imageUrl(cat.image)"
+                    :alt="cat.name"
+                    class="cat-thumb"
+                  />
+                  <div v-else class="cat-thumb-placeholder">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/>
+                    </svg>
+                  </div>
+                  <span class="font-bold">{{ cat.name }}</span>
+                </div>
               </td>
-              <td class="text-gray">{{ category.date }}</td>
+
+              <!-- Slug -->
+              <td>
+                <span class="slug-badge">{{ cat.slug }}</span>
+              </td>
+
+              <!-- Ngày tạo -->
+              <!-- <td class="text-gray">
+                {{
+                  cat.created_at
+                    ? new Date(cat.created_at).toLocaleDateString("vi-VN")
+                    : "—"
+                }}
+              </td> -->
+
+              <!-- Actions -->
               <td class="col-actions">
                 <div class="actions-wrapper">
-                  <button class="btn-action">
+                  <button class="btn-action edit" @click="goToEdit(cat.id)" title="Sửa">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      ></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
                     </svg>
                   </button>
-                  <button class="btn-action">
+                  <button class="btn-action delete" @click="handleDelete(cat.id)" title="Xóa">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      ></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
                   </button>
                 </div>
+              </td>
+            </tr>
+
+            <!-- Không tìm thấy kết quả -->
+            <tr v-if="categoryStore.categories.length > 0 && filteredSortedCategories.length === 0">
+              <td colspan="5" class="empty-row">
+                <p style="text-align:center;color:#9ca3af;padding:24px 0">
+                  Không tìm thấy danh mục "<strong>{{ search }}</strong>"
+                </p>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
+      <!-- Pagination -->
       <div class="pagination">
-        <span class="pagination-info"
-          >Hiển thị 1 - 4 trong tổng số 12 danh mục</span
-        >
-        <div class="pagination-pages">
-          <button class="page-btn disabled">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 19l-7-7 7-7"
-              ></path>
+        <span class="pagination-info">
+          Hiển thị {{ rangeStart }} - {{ rangeEnd }} trong tổng số {{ totalItems }} danh mục
+        </span>
+
+        <div class="pagination-controls">
+          <button
+            class="page-btn nav-btn"
+            :disabled="currentPage === 1"
+            @click="goPage(currentPage - 1)"
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
           </button>
-          <button class="page-btn active">1</button>
-          <button class="page-btn">2</button>
-          <button class="page-btn">3</button>
-          <button class="page-btn">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              ></path>
+
+          <button
+            v-for="p in pageNumbers"
+            :key="p"
+            class="page-btn"
+            :class="{ active: p === currentPage }"
+            @click="goPage(p)"
+          >
+            {{ p }}
+          </button>
+
+          <button
+            class="page-btn nav-btn"
+            :disabled="currentPage === totalPages"
+            @click="goPage(currentPage + 1)"
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
             </svg>
           </button>
         </div>
@@ -204,477 +312,220 @@ const categories = ref([
   </AdminLayout>
 </template>
 
-
-
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-/* --- Reset & Global --- */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-.admin-layout {
-  display: flex;
-  height: 100vh;
-  font-family: "Inter", sans-serif;
-  background-color: #f8f9fa;
-  color: #111827;
-}
-
-/* --- Sidebar --- */
-.sidebar {
-  width: 260px;
-  background-color: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-.sidebar-header {
-  height: 64px;
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  gap: 12px;
-}
-.logo-box {
-  width: 32px;
-  height: 32px;
-  background-color: #2563eb;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.logo-icon {
-  width: 20px;
-  height: 20px;
-  color: #ffffff;
-}
-.logo-text {
-  display: flex;
-  flex-direction: column;
-}
-.brand-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: #2563eb;
-  line-height: 1.2;
-}
-.brand-sub {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.sidebar-nav {
-  flex: 1;
-  padding: 24px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  text-decoration: none;
-  color: #4b5563;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: background-color 0.2s, color 0.2s;
-}
-.nav-item:hover {
-  background-color: #f3f4f6;
-}
-.nav-item.active {
-  background-color: #eff6ff;
-  color: #2563eb;
-}
-.nav-icon {
-  width: 20px;
-  height: 20px;
-}
-.sidebar-footer {
-  padding: 20px 16px;
-  border-top: 1px solid #e5e7eb;
-}
-
-/* --- Main Content & Topbar --- */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.topbar {
-  height: 64px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
-  flex-shrink: 0;
-}
-.page-title-main {
-  font-size: 18px;
-  font-weight: 700;
-}
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.search-container {
-  position: relative;
-}
-.search-input {
-  width: 280px;
-  padding: 10px 16px 10px 40px;
-  background-color: #f3f4f6;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  transition: background-color 0.2s;
-}
-.search-input:focus {
-  background-color: #ffffff;
-  box-shadow: 0 0 0 1px #e5e7eb;
-}
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: #9ca3af;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #4b5563;
-  display: flex;
-  align-items: center;
-}
-.icon-btn:hover {
-  color: #111827;
-}
-.icon-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-left: 24px;
-  border-left: 1px solid #e5e7eb;
-}
-.user-details {
-  display: flex;
-  flex-direction: column;
-  text-align: right;
-}
-.user-name {
-  font-size: 14px;
-  font-weight: 600;
-}
-.user-role {
-  font-size: 12px;
-  color: #9ca3af;
-}
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* --- Page Content --- */
-.page-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 32px;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 .content-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  padding: 32px 32px 0;
 }
-.content-titles h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-.content-titles p {
-  font-size: 14px;
-  color: #4b5563;
-}
-.btn-add {
-  background-color: #2563eb;
-  color: #ffffff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-.btn-add:hover {
-  background-color: #1d4ed8;
-}
-.btn-add svg {
-  width: 18px;
-  height: 18px;
-}
+.content-titles h2 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.content-titles p  { font-size: 14px; color: #4b5563; }
 
-/* --- Data Card --- */
+.btn-add {
+  background-color: #2563eb; color: #fff;
+  border: none; padding: 10px 20px; border-radius: 8px;
+  font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; transition: background-color .2s;
+}
+.btn-add:hover { background-color: #1d4ed8; }
+.btn-add svg { width: 18px; height: 18px; }
+
 .data-card {
-  background-color: #ffffff;
+  background: #fff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  margin: 24px 32px 32px;
 }
 
+/* Filter bar */
 .filter-bar {
-  display: flex;
-  gap: 16px;
+  display: flex; gap: 12px; align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafb;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  background: #f9fafb;
+  border-radius: 12px 12px 0 0;
 }
-.filter-search-box {
-  position: relative;
-  flex: 1;
-}
+.filter-search-box { position: relative; flex: 1; }
 .filter-input {
   width: 100%;
   padding: 10px 16px 10px 40px;
-  background-color: #ffffff;
+  background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 14px;
-  outline: none;
+  font-size: 14px; outline: none;
+  transition: border-color .2s;
 }
-.filter-search-box .search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: #9ca3af;
+.filter-input:focus { border-color: #2563eb; }
+.search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 18px; height: 18px; color: #9ca3af; pointer-events: none;
 }
 
+/* Select filter */
 .filter-select-box {
   position: relative;
+  min-width: 150px;
 }
 .filter-select {
+  width: 100%;
   appearance: none;
-  padding: 10px 36px 10px 16px;
-  background-color: #ffffff;
+  padding: 10px 36px 10px 14px;
+  background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 14px;
-  min-width: 160px;
+  color: #374151;
   outline: none;
   cursor: pointer;
+  transition: border-color .2s;
 }
-.filter-select-box .dropdown-icon {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: #4b5563;
-  pointer-events: none;
+.filter-select:focus { border-color: #2563eb; }
+.select-arrow {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: #6b7280; pointer-events: none;
 }
 
-.btn-filter {
-  background-color: #ffffff;
+/* Filter icon button */
+.btn-filter-icon {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff;
   border: 1px solid #e5e7eb;
-  padding: 10px;
   border-radius: 8px;
   cursor: pointer;
-  color: #4b5563;
-  display: flex;
-  align-items: center;
+  color: #6b7280;
+  transition: background .2s, color .2s;
+  flex-shrink: 0;
 }
-.btn-filter svg {
-  width: 20px;
-  height: 20px;
-}
+.btn-filter-icon:hover { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+.btn-filter-icon svg { width: 18px; height: 18px; }
 
-/* --- Table (Đã fix lỗi Wrapper) --- */
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
-}
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
+/* Table */
+.table-responsive { width: 100%; overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; text-align: left; }
 .data-table th {
-  padding: 16px 24px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
+  padding: 14px 24px;
+  font-size: 11px; font-weight: 700; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+  user-select: none;
 }
-.sort-icon {
-  display: inline-block;
-  margin-left: 4px;
-  font-size: 12px;
+.data-table th.sortable {
   cursor: pointer;
 }
+.data-table th.sortable:hover { color: #374151; }
+.sort-icon { margin-left: 4px; font-size: 12px; opacity: .4; }
+.sort-icon.active { opacity: 1; color: #2563eb; }
+
 .data-table td {
-  padding: 16px 24px;
+  padding: 14px 24px;
   border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
-  font-size: 14px;
-  white-space: nowrap;
+  font-size: 14px; white-space: nowrap;
 }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover { background: #f9fafb; }
 
-/* Category Specific Styles */
-.category-name-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.font-medium { font-weight: 500; }
+.font-bold   { font-weight: 700; color: #111827; }
+.text-gray   { color: #6b7280; }
+
+/* Name cell: ảnh + tên */
+.name-cell {
+  display: flex; align-items: center; gap: 12px;
 }
-.category-icon-box {
-  width: 40px;
-  height: 40px;
-  background-color: #eff6ff; /* Màu xanh nhạt */
-  color: #2563eb; /* Màu icon xanh đậm */
+.cat-thumb {
+  width: 36px; height: 36px;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
-/* Style cho SVG truyền qua v-html */
-.category-icon-box :deep(svg) {
-  width: 20px;
-  height: 20px;
+.cat-thumb-placeholder {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  color: #d1d5db;
 }
+.cat-thumb-placeholder svg { width: 18px; height: 18px; }
 
 .slug-badge {
-  background-color: #f3f4f6;
-  color: #4b5563;
-  padding: 4px 8px;
-  border-radius: 4px;
+  background: #f3f4f6; color: #4b5563;
+  padding: 4px 10px; border-radius: 6px;
   font-size: 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.font-medium {
-  font-weight: 500;
-}
-.font-bold {
-  font-weight: 700;
-  color: #111827;
-}
-.text-gray {
-  color: #6b7280;
-}
-
 /* Actions */
-.text-right {
-  text-align: right;
-}
+.text-right  { text-align: right; }
 .actions-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
+  display: flex; justify-content: flex-end;
+  align-items: center; gap: 6px;
 }
 .btn-action {
-  background: none;
-  border: none;
-  cursor: pointer;
+  background: none; border: none; cursor: pointer;
+  padding: 7px; border-radius: 6px;
+  transition: background .2s, color .2s;
   color: #9ca3af;
-  padding: 6px;
-  border-radius: 6px;
-  transition: background-color 0.2s, color 0.2s;
 }
-.btn-action:hover {
-  background-color: #f3f4f6;
-  color: #111827;
-}
-.btn-action svg {
-  width: 18px;
-  height: 18px;
-}
+.btn-action.edit:hover  { background: #eff6ff; color: #2563eb; }
+.btn-action.delete:hover { background: #fef2f2; color: #ef4444; }
+.btn-action svg { width: 18px; height: 18px; display: block; }
 
-/* --- Pagination --- */
+/* Empty */
+.empty-row { padding: 40px 0 !important; }
+.empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+  color: #9ca3af; padding: 32px 0;
+}
+.empty-state p { font-size: 14px; }
+
+/* Pagination */
 .pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px;
+  border-top: 1px solid #e5e7eb;
 }
-.pagination-info {
-  font-size: 13px;
-  color: #4b5563;
-}
-.pagination-pages {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.pagination-info { font-size: 13px; color: #4b5563; }
+
+.pagination-controls {
+  display: flex; align-items: center; gap: 4px;
 }
 .page-btn {
-  min-width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #ffffff;
+  min-width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #111827;
+  border-radius: 8px;
+  font-size: 14px; font-weight: 500; color: #374151;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background .15s, border-color .15s, color .15s;
+  padding: 0 6px;
 }
-.page-btn:hover:not(.disabled):not(.active) {
-  background-color: #f3f4f6;
+.page-btn:hover:not(:disabled):not(.active) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
 }
 .page-btn.active {
-  background-color: #2563eb;
-  color: #ffffff;
+  background: #2563eb;
   border-color: #2563eb;
-  font-weight: 600;
+  color: #fff;
 }
-.page-btn.disabled {
-  color: #9ca3af;
-  background-color: #f9fafb;
+.page-btn:disabled {
+  opacity: .35;
   cursor: not-allowed;
 }
-.page-btn svg {
-  width: 16px;
-  height: 16px;
-}
+.page-btn.nav-btn { color: #6b7280; }
 </style>

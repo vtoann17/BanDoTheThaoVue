@@ -12,6 +12,7 @@ import ProductView from '@/views/ProductView.vue'
 import ProductdetailView from '@/views/ProductdetailView.vue'
 import Checkout from '@/components/Checkout.vue'
 import ProductAdmin from '@/views/admin/ProductAdmin.vue'
+import Dashboar from '@/views/admin/Dashboar.vue'
 import ProductAdd from '@/views/admin/ProductAdd.vue'
 import CategoryAdmin from '@/views/admin/CategoryAdmin.vue'
 import CategoryAdd from '@/views/admin/CategoryAdd.vue'
@@ -67,6 +68,12 @@ const router = createRouter({
       path: "/productadmin",
       name: "productadmin",
       component: ProductAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/dashboar",
+      name: "dashboar",
+      component: Dashboar,
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
