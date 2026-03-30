@@ -19,6 +19,14 @@ import Profile from '@/views/user/Profile.vue'
 import ChangePassword from '@/views/user/ChangePassword.vue'
 import Order from '@/views/user/Order.vue'
 import Address from '@/views/user/Address.vue'
+import Favorite from '@/views/user/Favorite.vue'
+import Coupon from '@/views/user/Coupon.vue'
+import Dashboard from '@/views/admin/Dashboard.vue'
+import OrderAdmin from '@/views/admin/OrderAdmin.vue'
+import UserAdmin from '@/views/admin/UserAdmin.vue'
+import UserAdd from '@/views/admin/UserAdd.vue'
+import BrandAdmin from '@/views/admin/BrandAdmin.vue'
+import BrandAdd from '@/views/admin/BrandAdd.vue'
 import Forbidden from '@/views/errors/Forbidden.vue'
 import { useAuth } from "@/stores/auth";
 import { useNotify } from "@/composables/useNotify";
@@ -108,6 +116,46 @@ const router = createRouter({
       name: "checkout",
       component: Checkout,
       meta: { requiresAuth: true }
+    },
+     {
+      path: "/favorite", // đường dẫn URL
+      name: "favorite",
+      component: Favorite, // component bạn tạo
+    },
+    {
+      path: "/coupon", // đường dẫn URL
+      name: "coupon",
+      component: Coupon, // component bạn tạo
+    },
+    {
+      path: "/dashboard", // đường dẫn URL
+      name: "dashboard",
+      component: Dashboard, // component bạn tạo
+    },
+     {
+      path: "/orderAdmin", // đường dẫn URL
+      name: "orderAdmin",
+      component: OrderAdmin, // component bạn tạo
+    },
+     {
+      path: "/userAdd", // đường dẫn URL
+      name: "userAdd",
+      component: UserAdd, // component bạn tạo
+    },
+    {
+      path: "/userAdmin", // đường dẫn URL
+      name: "userAdmin",
+      component: UserAdmin, // component bạn tạo
+    },
+    {
+      path: "/brandAdmin", // đường dẫn URL
+      name: "brandAdmin",
+      component: BrandAdmin, // component bạn tạo
+    },
+     {
+      path: "/brandAdd", // đường dẫn URL
+      name: "brandAdd",
+      component: BrandAdd, // component bạn tạo
     },
     {
       path: "/auth/login", // đường dẫn URL
