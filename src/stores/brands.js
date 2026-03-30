@@ -66,19 +66,27 @@ export const useBrands = defineStore("brands", () => {
         }
     };
    const deleteBrand = async (id) => {
-    try {
-        const res = await axios.delete(`${apiBase}/brands/${id}`, {
-            headers: authHeaders(),
-        });
-        if (res.status === 200 || res.status === 204) {
-            brands.value = brands.value.filter((c) => c.id !== id);
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.error("Lỗi xóa thương hiệu:", error.response?.data || error.message);
-        return false;
+  const confirmed = await notify.swalConfirm(
+    "Bạn có muốn xóa không?",
+    "Bạn chắc chắn chứ"
+  );
+  if (!confirmed) return false;
+
+  try {
+    const res = await axios.delete(`${apiBase}/brands/${id}`, {
+      headers: authHeaders(),
+    });
+
+    if (res.status === 200 || res.status === 204) {
+      brands.value = brands.value.filter((b) => b.id !== id);
+      notify.toastSuccess("Xóa thương hiệu thành công");
+      return true;
     }
+  } catch (error) {
+    console.error("deleteBrand:", error);
+    notify.toastError("Lỗi không xóa được thương hiệu");
+    return false;
+  }
 };
 
     return {
