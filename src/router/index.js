@@ -26,8 +26,9 @@ import Dashboard from '@/views/admin/Dashboard.vue'
 import OrderAdmin from '@/views/admin/OrderAdmin.vue'
 import UserAdmin from '@/views/admin/UserAdmin.vue'
 import UserAdd from '@/views/admin/UserAdd.vue'
-import BrandAdmin from '@/views/admin/BrandAdmin.vue'
-import BrandAdd from '@/views/admin/BrandAdd.vue'
+import BrandAdmin from '@/views/admin/brands/BrandAdmin.vue'
+import BrandAdd from '@/views/admin/brands/BrandAdd.vue'
+import BrandEdit from '@/views/admin/brands/BrandEdit.vue'
 import Forbidden from '@/views/errors/Forbidden.vue'
 import { useAuth } from "@/stores/auth";
 import { useNotify } from "@/composables/useNotify";
@@ -124,7 +125,7 @@ const router = createRouter({
       component: Checkout,
       meta: { requiresAuth: true }
     },
-     {
+    {
       path: "/favorite", // đường dẫn URL
       name: "favorite",
       component: Favorite, // component bạn tạo
@@ -135,16 +136,22 @@ const router = createRouter({
       component: Coupon, // component bạn tạo
     },
     {
+      path: "/brandedit/:id", // Thêm :id để nhận tham số từ URL
+      name: "brandedit",
+      component: BrandEdit,
+      meta: { requiresAuth: true, requiresAdmin: true } // Nên thêm bảo mật nếu là trang admin
+    },
+    {
       path: "/dashboard", // đường dẫn URL
       name: "dashboard",
       component: Dashboard, // component bạn tạo
     },
-     {
+    {
       path: "/orderAdmin", // đường dẫn URL
       name: "orderAdmin",
       component: OrderAdmin, // component bạn tạo
     },
-     {
+    {
       path: "/userAdd", // đường dẫn URL
       name: "userAdd",
       component: UserAdd, // component bạn tạo
@@ -159,7 +166,7 @@ const router = createRouter({
       name: "brandAdmin",
       component: BrandAdmin, // component bạn tạo
     },
-     {
+    {
       path: "/brandAdd", // đường dẫn URL
       name: "brandAdd",
       component: BrandAdd, // component bạn tạo

@@ -97,34 +97,12 @@ function resetForm() {
     <div class="page-content">
       <nav class="breadcrumb">
         <a href="#" class="breadcrumb-link">Trang chủ</a>
-        <svg
-          class="breadcrumb-separator"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 5l7 7-7 7"
-          ></path>
+        <svg class="breadcrumb-separator" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
-        <RouterLink to="/categoryadmin" class="breadcrumb-link"
-          >Danh mục</RouterLink
-        >
-        <svg
-          class="breadcrumb-separator"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 5l7 7-7 7"
-          ></path>
+        <RouterLink to="/categoryadmin" class="breadcrumb-link">Danh mục</RouterLink>
+        <svg class="breadcrumb-separator" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
         <span class="breadcrumb-current">Thêm danh mục mới</span>
       </nav>
@@ -140,14 +118,8 @@ function resetForm() {
         <div class="form-grid">
           <div class="form-group">
             <label>Tên danh mục</label>
-            <input
-              type="text"
-              class="form-control"
-              :class="{ 'is-error': errors.name }"
-              placeholder="Nhập tên danh mục (vd: Giày chạy bộ)"
-              v-model="form.name"
-              @input="autoSlug"
-            />
+            <input type="text" class="form-control" :class="{ 'is-error': errors.name }"
+              placeholder="Nhập tên danh mục (vd: Giày chạy bộ)" v-model="form.name" @input="autoSlug" />
             <p v-if="errors.name" class="error-text">{{ errors.name }}</p>
           </div>
 
@@ -155,25 +127,12 @@ function resetForm() {
           <div class="form-group">
             <label>Đường dẫn (Slug)</label>
             <div class="input-with-icon">
-              <input
-                type="text"
-                class="form-control"
-                :class="{ 'is-error': errors.slug }"
-                placeholder="giay-chay-bo"
-                v-model="form.slug"
-              />
-              <svg
-                class="input-icon right"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                ></path>
+              <input type="text" class="form-control" :class="{ 'is-error': errors.slug }" placeholder="giay-chay-bo"
+                v-model="form.slug" />
+              <svg class="input-icon right" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                </path>
               </svg>
             </div>
             <p v-if="errors.slug" class="error-text">{{ errors.slug }}</p>
@@ -184,35 +143,16 @@ function resetForm() {
 
           <div class="form-group col-span-2">
             <label>Ảnh danh mục</label>
-            <div
-              class="upload-zone"
-              :class="{ 'has-preview': imagePreview }"
-              @click="$refs.fileInput.click()"
-              @dragover.prevent
-              @drop.prevent="onDrop"
-            >
-              <input
-                ref="fileInput"
-                type="file"
-                accept="image/jpg,image/jpeg,image/png,image/gif"
-                class="file-input-hidden"
-                @change="onFileChange"
-              />
+            <div class="upload-zone" :class="{ 'has-preview': imagePreview }" @click="$refs.fileInput.click()"
+              @dragover.prevent @drop.prevent="onDrop">
+              <input ref="fileInput" type="file" accept="image/jpg,image/jpeg,image/png,image/gif"
+                class="file-input-hidden" @change="onFileChange" />
 
               <template v-if="!imagePreview">
                 <div class="upload-placeholder">
-                  <svg
-                    class="upload-icon"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="1.5"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
+                  <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <p class="upload-text">
                     Kéo &amp; thả ảnh vào đây, hoặc
@@ -224,24 +164,9 @@ function resetForm() {
 
               <template v-else>
                 <img :src="imagePreview" class="image-preview" alt="Preview" />
-                <button
-                  class="remove-img-btn"
-                  @click.stop="removeImage"
-                  title="Xóa ảnh"
-                >
-                  <svg
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    width="16"
-                    height="16"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                <button class="remove-img-btn" @click.stop="removeImage" title="Xóa ảnh">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
                 <div class="preview-filename">{{ imageFile?.name }}</div>
@@ -287,20 +212,24 @@ function resetForm() {
   font-size: 13px;
   margin-bottom: 24px;
 }
+
 .breadcrumb-link {
   color: #6b7280;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
 }
+
 .breadcrumb-link:hover {
   color: #111827;
 }
+
 .breadcrumb-separator {
   width: 14px;
   height: 14px;
   color: #9ca3af;
 }
+
 .breadcrumb-current {
   color: #111827;
   font-weight: 600;
@@ -310,11 +239,13 @@ function resetForm() {
 .content-header {
   margin-bottom: 24px;
 }
+
 .content-titles h2 {
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 6px;
 }
+
 .content-titles p {
   font-size: 14px;
   color: #6b7280;
@@ -359,14 +290,17 @@ function resetForm() {
   outline: none;
   transition: all 0.2s;
 }
+
 .form-control::placeholder {
   color: #9ca3af;
 }
+
 .form-control:focus {
   background: #fff;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
+
 .form-control.is-error {
   border-color: #ef4444;
   background: #fff;
@@ -375,6 +309,7 @@ function resetForm() {
 .input-with-icon {
   position: relative;
 }
+
 .input-icon.right {
   position: absolute;
   right: 14px;
@@ -391,6 +326,7 @@ function resetForm() {
   color: #9ca3af;
   margin-top: 8px;
 }
+
 .error-text {
   font-size: 12px;
   color: #ef4444;
@@ -412,10 +348,12 @@ function resetForm() {
   transition: border-color 0.2s, background 0.2s;
   overflow: hidden;
 }
+
 .upload-zone:hover {
   border-color: #3b82f6;
   background: #eff6ff;
 }
+
 .upload-zone.has-preview {
   border-style: solid;
   border-color: #e5e7eb;
@@ -435,21 +373,25 @@ function resetForm() {
   padding: 24px;
   text-align: center;
 }
+
 .upload-icon {
   width: 48px;
   height: 48px;
   color: #9ca3af;
 }
+
 .upload-text {
   font-size: 14px;
   color: #4b5563;
   font-weight: 500;
 }
+
 .upload-link {
   color: #2563eb;
   font-weight: 600;
   text-decoration: underline;
 }
+
 .upload-hint {
   font-size: 12px;
   color: #9ca3af;
@@ -478,6 +420,7 @@ function resetForm() {
   color: #fff;
   transition: background 0.2s;
 }
+
 .remove-img-btn:hover {
   background: #ef4444;
 }
@@ -518,6 +461,7 @@ function resetForm() {
   cursor: pointer;
   transition: all 0.2s;
 }
+
 .btn-secondary:hover:not(:disabled) {
   background: #f9fafb;
   border-color: #9ca3af;
@@ -537,9 +481,11 @@ function resetForm() {
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .btn-primary:hover:not(:disabled) {
   background: #1d4ed8;
 }
+
 .btn-primary:disabled,
 .btn-secondary:disabled {
   opacity: 0.6;
@@ -556,6 +502,7 @@ function resetForm() {
   animation: spin 0.6s linear infinite;
   flex-shrink: 0;
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
