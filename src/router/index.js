@@ -14,8 +14,8 @@ import Checkout from '@/components/Checkout.vue'
 import ProductAdmin from '@/views/admin/ProductAdmin.vue'
 import Dashboar from '@/views/admin/Dashboar.vue'
 import ProductAdd from '@/views/admin/ProductAdd.vue'
-import CategoryAdmin from '@/views/admin/categories/CategoryAdmin.vue'
-import CategoryAdd from '@/views/admin/categories/CategoryAdd.vue'
+import CategoryAdmin from '@/views/admin/CategoryAdmin.vue'
+import CategoryAdd from '@/views/admin/CategoryAdd.vue'
 import Profile from '@/views/user/Profile.vue'
 import ChangePassword from '@/views/user/ChangePassword.vue'
 import Order from '@/views/user/Order.vue'
@@ -96,6 +96,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
+      path: "/categoryedit/:id",
+      name: "categoryedit",
+      component: CategoryEdit,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
       path: "/profile",
       name: "profile",
       component: Profile,
@@ -146,27 +152,27 @@ const router = createRouter({
       name: "dashboard",
       component: Dashboard, // component bạn tạo
     },
-    {
+     {
       path: "/orderAdmin", // đường dẫn URL
       name: "orderAdmin",
       component: OrderAdmin, // component bạn tạo
     },
-    {
+     {
       path: "/userAdd", // đường dẫn URL
       name: "userAdd",
       component: UserAdd, // component bạn tạo
     },
     {
-      path: "/userAdmin", // đường dẫn URL
-      name: "userAdmin",
+      path: "/useradmin", // đường dẫn URL
+      name: "useradmin",
       component: UserAdmin, // component bạn tạo
     },
     {
-      path: "/brandAdmin", // đường dẫn URL
-      name: "brandAdmin",
+      path: "/brandadmin", // đường dẫn URL
+      name: "brandadmin",
       component: BrandAdmin, // component bạn tạo
     },
-    {
+     {
       path: "/brandAdd", // đường dẫn URL
       name: "brandAdd",
       component: BrandAdd, // component bạn tạo
