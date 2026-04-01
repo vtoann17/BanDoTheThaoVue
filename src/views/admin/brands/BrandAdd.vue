@@ -1,13 +1,14 @@
 <script setup>
-import { reactive, ref } from "vue";
+import { reactive, ref } from 'vue';
 import { useRouter } from "vue-router";
-import AdminLayout from "../../../layouts/AdminLayout.vue";
-import { useCategories } from "../../../stores/categories";
+import AdminLayout from "@/layouts/AdminLayout.vue";
+import { useBrands } from '@/stores/brands';
 import { useNotify } from "@/composables/useNotify";
 
 const router = useRouter();
 const notify = useNotify();
-const categoryStore = useCategories();
+const brandStore = useBrands();
+
 const form = reactive({ name: "", slug: "" });
 const errors = reactive({ name: "", slug: "" });
 const loading = ref(false);
@@ -56,7 +57,7 @@ function validate() {
   errors.slug = "";
   let ok = true;
   if (!form.name.trim()) {
-    errors.name = "Tên danh mục không được để trống";
+    errors.name = "Tên thương hiệu không được để trống";
     ok = false;
   }
   if (!form.slug.trim()) {
@@ -75,11 +76,11 @@ async function submitForm() {
   if (imageFile.value) fd.append("image", imageFile.value);
 
   loading.value = true;
-  const result = await categoryStore.createCategory(fd);
+  const result = await brandStore.createBrand(fd);
   loading.value = false;
 
   if (result) {
-    router.push("/categoryadmin");
+    router.push("/brandadmin");
   }
 }
 
@@ -96,39 +97,49 @@ function resetForm() {
   <AdminLayout>
     <div class="page-content">
       <nav class="breadcrumb">
-        <a href="#" class="breadcrumb-link">Trang chủ</a>
+        <RouterLink to="/" class="breadcrumb-link">Trang chủ</RouterLink>
         <svg class="breadcrumb-separator" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
-        <RouterLink to="/categoryadmin" class="breadcrumb-link">Danh mục</RouterLink>
+        <RouterLink to="/brandadmin" class="breadcrumb-link">Thương hiệu</RouterLink>
         <svg class="breadcrumb-separator" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
         </svg>
-        <span class="breadcrumb-current">Thêm danh mục mới</span>
+        <span class="breadcrumb-current">Thêm thương hiệu mới</span>
       </nav>
 
       <div class="content-header">
         <div class="content-titles">
-          <h2>Thêm danh mục mới</h2>
-          <p>Tạo danh mục sản phẩm mới cho cửa hàng SportGear</p>
+          <h2>Thêm thương hiệu mới</h2>
+          <p>Tạo thương hiệu sản phẩm mới cho hệ thống Sports Store</p>
         </div>
       </div>
 
       <div class="form-card">
         <div class="form-grid">
           <div class="form-group">
-            <label>Tên danh mục</label>
-            <input type="text" class="form-control" :class="{ 'is-error': errors.name }"
-              placeholder="Nhập tên danh mục (vd: Giày chạy bộ)" v-model="form.name" @input="autoSlug" />
+            <label>Tên thương hiệu</label>
+            <input
+              type="text"
+              class="form-control"
+              :class="{ 'is-error': errors.name }"
+              placeholder="VD: Nike, Adidas, Puma..."
+              v-model="form.name"
+              @input="autoSlug"
+            />
             <p v-if="errors.name" class="error-text">{{ errors.name }}</p>
           </div>
 
-          <!-- Slug -->
           <div class="form-group">
             <label>Đường dẫn (Slug)</label>
             <div class="input-with-icon">
-              <input type="text" class="form-control" :class="{ 'is-error': errors.slug }" placeholder="giay-chay-bo"
-                v-model="form.slug" />
+              <input
+                type="text"
+                class="form-control"
+                :class="{ 'is-error': errors.slug }"
+                placeholder="nike-sportswear"
+                v-model="form.slug"
+              />
               <svg class="input-icon right" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
@@ -136,17 +147,25 @@ function resetForm() {
               </svg>
             </div>
             <p v-if="errors.slug" class="error-text">{{ errors.slug }}</p>
-            <p v-else class="helper-text">
-              Tự động tạo từ tên hoặc nhập thủ công
-            </p>
+            <p v-else class="helper-text">Tự động tạo từ tên hoặc nhập thủ công</p>
           </div>
 
           <div class="form-group col-span-2">
-            <label>Ảnh danh mục</label>
-            <div class="upload-zone" :class="{ 'has-preview': imagePreview }" @click="$refs.fileInput.click()"
-              @dragover.prevent @drop.prevent="onDrop">
-              <input ref="fileInput" type="file" accept="image/jpg,image/jpeg,image/png,image/gif"
-                class="file-input-hidden" @change="onFileChange" />
+            <label>Ảnh thương hiệu</label>
+            <div
+              class="upload-zone"
+              :class="{ 'has-preview': imagePreview }"
+              @click="$refs.fileInput.click()"
+              @dragover.prevent
+              @drop.prevent="onDrop"
+            >
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/jpg,image/jpeg,image/png,image/gif"
+                class="file-input-hidden"
+                @change="onFileChange"
+              />
 
               <template v-if="!imagePreview">
                 <div class="upload-placeholder">
@@ -155,8 +174,7 @@ function resetForm() {
                       d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <p class="upload-text">
-                    Kéo &amp; thả ảnh vào đây, hoặc
-                    <span class="upload-link">chọn file</span>
+                    Kéo &amp; thả ảnh vào đây, hoặc <span class="upload-link">chọn file</span>
                   </p>
                   <p class="upload-hint">JPG, PNG, GIF · Tối đa 2MB</p>
                 </div>
@@ -176,12 +194,10 @@ function resetForm() {
         </div>
 
         <div class="form-actions">
-          <button class="btn-secondary" @click="resetForm" :disabled="loading">
-            Hủy
-          </button>
+          <button class="btn-secondary" @click="resetForm" :disabled="loading">Hủy</button>
           <button class="btn-primary" @click="submitForm" :disabled="loading">
             <span v-if="loading" class="spinner"></span>
-            {{ loading ? "Đang lưu..." : "Lưu danh mục" }}
+            {{ loading ? "Đang lưu..." : "Lưu thương hiệu" }}
           </button>
         </div>
       </div>
@@ -192,11 +208,7 @@ function resetForm() {
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 .page-content {
   padding: 32px;
@@ -204,7 +216,6 @@ function resetForm() {
   font-family: "Inter", sans-serif;
 }
 
-/* Breadcrumb */
 .breadcrumb {
   display: flex;
   align-items: center;
@@ -212,46 +223,15 @@ function resetForm() {
   font-size: 13px;
   margin-bottom: 24px;
 }
+.breadcrumb-link { color: #6b7280; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+.breadcrumb-link:hover { color: #111827; }
+.breadcrumb-separator { width: 14px; height: 14px; color: #9ca3af; }
+.breadcrumb-current { color: #111827; font-weight: 600; }
 
-.breadcrumb-link {
-  color: #6b7280;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
-}
+.content-header { margin-bottom: 24px; }
+.content-titles h2 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+.content-titles p { font-size: 14px; color: #6b7280; }
 
-.breadcrumb-link:hover {
-  color: #111827;
-}
-
-.breadcrumb-separator {
-  width: 14px;
-  height: 14px;
-  color: #9ca3af;
-}
-
-.breadcrumb-current {
-  color: #111827;
-  font-weight: 600;
-}
-
-/* Header */
-.content-header {
-  margin-bottom: 24px;
-}
-
-.content-titles h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.content-titles p {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-/* Form Card */
 .form-card {
   background: #fff;
   border-radius: 12px;
@@ -266,9 +246,7 @@ function resetForm() {
   gap: 24px 32px;
 }
 
-.col-span-2 {
-  grid-column: span 2;
-}
+.col-span-2 { grid-column: span 2; }
 
 .form-group label {
   display: block;
@@ -290,26 +268,11 @@ function resetForm() {
   outline: none;
   transition: all 0.2s;
 }
+.form-control::placeholder { color: #9ca3af; }
+.form-control:focus { background: #fff; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.form-control.is-error { border-color: #ef4444; background: #fff; }
 
-.form-control::placeholder {
-  color: #9ca3af;
-}
-
-.form-control:focus {
-  background: #fff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-control.is-error {
-  border-color: #ef4444;
-  background: #fff;
-}
-
-.input-with-icon {
-  position: relative;
-}
-
+.input-with-icon { position: relative; }
 .input-icon.right {
   position: absolute;
   right: 14px;
@@ -321,20 +284,9 @@ function resetForm() {
   pointer-events: none;
 }
 
-.helper-text {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-top: 8px;
-}
+.helper-text { font-size: 12px; color: #9ca3af; margin-top: 8px; }
+.error-text { font-size: 12px; color: #ef4444; margin-top: 6px; font-weight: 500; }
 
-.error-text {
-  font-size: 12px;
-  color: #ef4444;
-  margin-top: 6px;
-  font-weight: 500;
-}
-
-/* Upload Zone */
 .upload-zone {
   position: relative;
   border: 2px dashed #d1d5db;
@@ -348,61 +300,18 @@ function resetForm() {
   transition: border-color 0.2s, background 0.2s;
   overflow: hidden;
 }
+.upload-zone:hover { border-color: #3b82f6; background: #eff6ff; }
+.upload-zone.has-preview { border-style: solid; border-color: #e5e7eb; background: #000; min-height: 220px; }
 
-.upload-zone:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
-}
+.file-input-hidden { display: none; }
 
-.upload-zone.has-preview {
-  border-style: solid;
-  border-color: #e5e7eb;
-  background: #000;
-  min-height: 220px;
-}
+.upload-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px; text-align: center; }
+.upload-icon { width: 48px; height: 48px; color: #9ca3af; }
+.upload-text { font-size: 14px; color: #4b5563; font-weight: 500; }
+.upload-link { color: #2563eb; font-weight: 600; text-decoration: underline; }
+.upload-hint { font-size: 12px; color: #9ca3af; }
 
-.file-input-hidden {
-  display: none;
-}
-
-.upload-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 24px;
-  text-align: center;
-}
-
-.upload-icon {
-  width: 48px;
-  height: 48px;
-  color: #9ca3af;
-}
-
-.upload-text {
-  font-size: 14px;
-  color: #4b5563;
-  font-weight: 500;
-}
-
-.upload-link {
-  color: #2563eb;
-  font-weight: 600;
-  text-decoration: underline;
-}
-
-.upload-hint {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.image-preview {
-  width: 100%;
-  height: 220px;
-  object-fit: contain;
-  display: block;
-}
+.image-preview { width: 100%; height: 220px; object-fit: contain; display: block; }
 
 .remove-img-btn {
   position: absolute;
@@ -420,10 +329,7 @@ function resetForm() {
   color: #fff;
   transition: background 0.2s;
 }
-
-.remove-img-btn:hover {
-  background: #ef4444;
-}
+.remove-img-btn:hover { background: #ef4444; }
 
 .preview-filename {
   position: absolute;
@@ -439,7 +345,6 @@ function resetForm() {
   overflow: hidden;
 }
 
-/* Form Actions */
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -461,11 +366,7 @@ function resetForm() {
   cursor: pointer;
   transition: all 0.2s;
 }
-
-.btn-secondary:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
-}
+.btn-secondary:hover:not(:disabled) { background: #f9fafb; border-color: #9ca3af; }
 
 .btn-primary {
   display: flex;
@@ -481,18 +382,10 @@ function resetForm() {
   cursor: pointer;
   transition: background 0.2s;
 }
-
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-
+.btn-primary:hover:not(:disabled) { background: #1d4ed8; }
 .btn-primary:disabled,
-.btn-secondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+.btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Loading spinner */
 .spinner {
   width: 15px;
   height: 15px;
@@ -502,10 +395,5 @@ function resetForm() {
   animation: spin 0.6s linear infinite;
   flex-shrink: 0;
 }
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
