@@ -1,46 +1,116 @@
 <script setup>
-import { ref } from "vue";
-import AdminLayout from "../../layouts/AdminLayout.vue";
+import { ref, onMounted, computed, watch } from "vue";
+import { useRouter } from "vue-router";
+import AdminLayout from "../../../layouts/AdminLayout.vue";
+import { useProducts } from "@/stores/products";
 
-const products = ref([
-  {
-    image: "https://via.placeholder.com/48/2d4a3e/ffffff?text=Shoe",
-    name: "Giày Tennis Nike Air Zoom",
-    category: "Tennis",
-    price: "3.500.000đ",
-    stock: 24,
-    status: "Đang bán",
-    statusClass: "status-active",
-  },
-  {
-    image: "https://via.placeholder.com/48/2d4a3e/ffffff?text=Racket",
-    name: "Vợt Wilson Pro Staff 97",
-    category: "Tennis",
-    price: "5.200.000đ",
-    stock: 0,
-    status: "Hết hàng",
-    statusClass: "status-out",
-  },
-  {
-    image: "https://via.placeholder.com/48/d4c3a3/ffffff?text=Ball",
-    name: "Bóng Adidas World Cup 2022",
-    category: "Bóng đá",
-    price: "1.800.000đ",
-    stock: 15,
-    status: "Ẩn",
-    statusClass: "status-hidden",
-  },
-  {
-    image: "https://via.placeholder.com/48/2d4a3e/ffffff?text=Shirt",
-    name: "Áo đấu Manchester United",
-    category: "Bóng đá",
-    price: "1.250.000đ",
-    stock: 120,
-    status: "Đang bán",
-    statusClass: "status-active",
-  },
-]);
+const router = useRouter();
+const productStore = useProducts();
+
+const apiBase = import.meta.env.VITE_API_BASE;
+const search = ref("");
+const sortValue = ref("id|desc");
+const sortKey = ref("id");
+const sortDir = ref("desc");
+const currentPage = ref(1);
+const perPage = 10;
+
+async function fetchData() {
+  await productStore.loadProducts({
+    search: search.value,
+    sort_by: sortKey.value,
+    sort_dir: sortDir.value,
+    per_page: perPage,
+    page: currentPage.value,
+  });
+}
+
+onMounted(fetchData);
+watch(currentPage, fetchData);
+
+function onSortChange() {
+  const [key, dir] = sortValue.value.split("|");
+  sortKey.value = key;
+  sortDir.value = dir;
+  currentPage.value = 1;
+  fetchData();
+}
+
+let searchTimer = null;
+function onSearchInput() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    currentPage.value = 1;
+    fetchData();
+  }, 400);
+}
+
+function toggleSort(key) {
+  if (sortKey.value === key) {
+    sortDir.value = sortDir.value === "asc" ? "desc" : "asc";
+  } else {
+    sortKey.value = key;
+    sortDir.value = "asc";
+  }
+  sortValue.value = `${sortKey.value}|${sortDir.value}`;
+  currentPage.value = 1;
+  fetchData();
+}
+
+function sortIcon(key) {
+  if (sortKey.value !== key) return "↕";
+  return sortDir.value === "asc" ? "↑" : "↓";
+}
+
+function goPage(p) {
+  if (p < 1 || p > productStore.lastPage) return;
+  currentPage.value = p;
+}
+
+const pageNumbers = computed(() => {
+  const pages = [];
+  for (let i = 1; i <= productStore.lastPage; i++) pages.push(i);
+  return pages;
+});
+
+const rangeStart = computed(() =>
+  productStore.total === 0 ? 0 : (currentPage.value - 1) * perPage + 1
+);
+const rangeEnd = computed(() =>
+  Math.min(currentPage.value * perPage, productStore.total)
+);
+
+async function handleDelete(id) {
+  const ok = await productStore.deleteProduct(id);
+  if (ok) fetchData();
+}
+
+function goToAdd() {
+  router.push("/productadd");
+}
+function goToEdit(id) {
+  router.push(`/productedit/${id}`);
+}
+
+function imageUrl(path) {
+  if (!path) return null;
+  return `${apiBase.replace("/api", "")}/storage/${path}`;
+}
+
+function statusLabel(status) {
+  if (status === 1 || status === "active")
+    return { text: "Đang bán", cls: "status-active" };
+  if (status === 0 || status === "hidden")
+    return { text: "Ẩn", cls: "status-hidden" };
+  return { text: "Hết hàng", cls: "status-out" };
+}
+
+function formatPrice(price) {
+  if (!price) return "—";
+  return Number(price).toLocaleString("vi-VN") + "đ";
+}
 </script>
+
 <template>
   <AdminLayout>
     <div class="content-header">
@@ -48,14 +118,14 @@ const products = ref([
         <h2>Quản lý Sản phẩm</h2>
         <p>Xem và quản lý danh sách sản phẩm trong kho của bạn.</p>
       </div>
-      <button class="btn-add">
+      <button class="btn-add" @click="goToAdd">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
             d="M12 4v16m8-8H4"
-          ></path>
+          />
         </svg>
         Thêm sản phẩm
       </button>
@@ -75,18 +145,29 @@ const products = ref([
               stroke-linejoin="round"
               stroke-width="2"
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            ></path>
+            />
           </svg>
           <input
             type="text"
-            placeholder="Tìm tên sản phẩm, mã SKU..."
+            placeholder="Tìm tên sản phẩm..."
             class="filter-input"
+            v-model="search"
+            @input="onSearchInput"
           />
         </div>
 
         <div class="filter-select-box">
-          <select class="filter-select">
-            <option>Tất cả danh mục</option>
+          <select
+            class="filter-select"
+            v-model="sortValue"
+            @change="onSortChange"
+          >
+            <option value="id|desc">Mới nhất</option>
+            <option value="id|asc">Cũ nhất</option>
+            <option value="name|asc">Tên A-Z</option>
+            <option value="name|desc">Tên Z-A</option>
+            <option value="price|asc">Giá thấp - cao</option>
+            <option value="price|desc">Giá cao - thấp</option>
           </select>
           <svg
             class="dropdown-icon"
@@ -99,26 +180,7 @@ const products = ref([
               stroke-linejoin="round"
               stroke-width="2"
               d="M19 9l-7 7-7-7"
-            ></path>
-          </svg>
-        </div>
-
-        <div class="filter-select-box">
-          <select class="filter-select">
-            <option>Trạng thái</option>
-          </select>
-          <svg
-            class="dropdown-icon"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 9l-7 7-7-7"
-            ></path>
+            />
           </svg>
         </div>
 
@@ -129,7 +191,7 @@ const products = ref([
               stroke-linejoin="round"
               stroke-width="2"
               d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            ></path>
+            />
           </svg>
         </button>
       </div>
@@ -138,51 +200,145 @@ const products = ref([
         <table class="product-table">
           <thead>
             <tr>
+              <th
+                class="sortable"
+                @click="toggleSort('id')"
+                style="width: 80px; cursor: pointer"
+              >
+                ID
+                <span
+                  class="sort-icon"
+                  :style="{ color: sortKey === 'id' ? '#2563eb' : '' }"
+                >
+                  {{ sortIcon("id") }}
+                </span>
+              </th>
               <th style="width: 80px">HÌNH ẢNH</th>
-              <th>TÊN SẢN PHẨM <span class="sort-icon">↕</span></th>
-              <th>DANH MỤC <span class="sort-icon">↕</span></th>
-              <th>GIÁ <span class="sort-icon">↕</span></th>
-              <th>KHO <span class="sort-icon">↕</span></th>
-              <th style="width: 120px">TRẠNG THÁI</th>
+              <th
+                class="sortable"
+                @click="toggleSort('name')"
+                style="cursor: pointer"
+              >
+                TÊN SẢN PHẨM
+                <span
+                  class="sort-icon"
+                  :style="{ color: sortKey === 'name' ? '#2563eb' : '' }"
+                >
+                  {{ sortIcon("name") }}
+                </span>
+              </th>
+              <th
+                class="sortable"
+                @click="toggleSort('price')"
+                style="cursor: pointer"
+              >
+                GIÁ
+                <span
+                  class="sort-icon"
+                  :style="{ color: sortKey === 'price' ? '#2563eb' : '' }"
+                >
+                  {{ sortIcon("price") }}
+                </span>
+              </th>
+              <th style="width: 130px">TRẠNG THÁI</th>
               <th class="text-right">THAO TÁC</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, index) in products" :key="index">
+            <!-- Empty -->
+            <tr v-if="productStore.products.length === 0">
+              <td
+                colspan="5"
+                style="text-align: center; padding: 48px 0; color: #9ca3af"
+              >
+                Chưa có sản phẩm nào
+              </td>
+            </tr>
+
+            <tr v-for="item in productStore.products" :key="item.id">
+              <td class="font-medium text-gray">#{{ item.id }}</td>
               <td>
                 <div class="img-wrapper">
-                  <img :src="item.image" :alt="item.name" />
+                  <img
+                    v-if="item.image"
+                    :src="imageUrl(item.image)"
+                    :alt="item.name"
+                  />
+                  <svg
+                    v-else
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    style="
+                      width: 24px;
+                      height: 24px;
+                      color: #d1d5db;
+                      margin: auto;
+                      display: block;
+                      margin-top: 10px;
+                    "
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.5"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"
+                    />
+                  </svg>
                 </div>
               </td>
               <td class="font-semibold">{{ item.name }}</td>
-              <td class="text-gray">{{ item.category }}</td>
-              <td class="font-bold">{{ item.price }}</td>
-              <td>{{ item.stock }}</td>
+              <td class="font-bold">{{ formatPrice(item.price) }}</td>
               <td>
-                <span :class="['status-badge', item.statusClass]">{{
-                  item.status
-                }}</span>
+                <span :class="['status-badge', statusLabel(item.status).cls]">
+                  {{ statusLabel(item.status).text }}
+                </span>
               </td>
               <td class="col-actions">
                 <div class="actions-wrapper">
-                  <button class="btn-action">
+                  <button
+                    class="btn-action btn-variant"
+                    @click="router.push(`/variantadmin/${item.id}`)"
+                    title="Biến thể"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 6h16M4 10h16M4 14h10M4 18h6"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    class="btn-action"
+                    @click="goToEdit(item.id)"
+                    title="Sửa"
+                  >
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      ></path>
+                      />
                     </svg>
                   </button>
-                  <button class="btn-action">
+                  <button
+                    class="btn-action"
+                    @click="handleDelete(item.id)"
+                    title="Xóa"
+                    style="color: #9ca3af"
+                    onmouseover="this.style.color='#ef4444';this.style.background='#fef2f2'"
+                    onmouseout="this.style.color='#9ca3af';this.style.background='none'"
+                  >
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      ></path>
+                      />
                     </svg>
                   </button>
                 </div>
@@ -193,33 +349,46 @@ const products = ref([
       </div>
 
       <div class="pagination">
-        <span class="pagination-info"
-          >Hiển thị 1 - 4 trong tổng số 48 sản phẩm</span
-        >
+        <span class="pagination-info">
+          Hiển thị {{ rangeStart }} - {{ rangeEnd }} trong tổng số
+          {{ productStore.total }} sản phẩm
+        </span>
         <div class="pagination-pages">
-          <button class="page-btn disabled">
+          <button
+            class="page-btn"
+            :class="{ disabled: currentPage === 1 }"
+            @click="goPage(currentPage - 1)"
+          >
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M15 19l-7-7 7-7"
-              ></path>
+              />
             </svg>
           </button>
-          <button class="page-btn active">1</button>
-          <button class="page-btn">2</button>
-          <button class="page-btn">3</button>
-          <span class="page-dots">...</span>
-          <button class="page-btn">12</button>
-          <button class="page-btn">
+          <button
+            v-for="p in pageNumbers"
+            :key="p"
+            class="page-btn"
+            :class="{ active: p === currentPage }"
+            @click="goPage(p)"
+          >
+            {{ p }}
+          </button>
+          <button
+            class="page-btn"
+            :class="{ disabled: currentPage === productStore.lastPage }"
+            @click="goPage(currentPage + 1)"
+          >
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M9 5l7 7-7 7"
-              ></path>
+              />
             </svg>
           </button>
         </div>

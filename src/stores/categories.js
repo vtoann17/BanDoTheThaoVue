@@ -7,20 +7,32 @@ export const useCategories = defineStore("categories", () => {
   const getToken = () =>JSON.parse(localStorage.getItem("auth") || "{}")?.token ?? null;
   const categories = ref([]);
   const notify = useNotify();
+  const total = ref(0);
+  const currentPage = ref(1);
+  const lastPage = ref(1);
+  const perPage = ref(10);
   const apiBase = import.meta.env.VITE_API_BASE;
   const authHeaders = () => ({
     Authorization: `Bearer ${getToken()}`,
   });
 
 
-  const loadCategories = async () => {
+  const loadCategories = async (params = {}) => {
     try {
       const res = await axios.get(`${apiBase}/categories`, {
         headers: authHeaders(),
+        params,
       });
-      categories.value = Array.isArray(res.data) ? res.data : res.data.data;
+      if (res.data?.data) {
+        categories.value = res.data.data;
+        total.value       = res.data.total ?? 0;
+        currentPage.value = res.data.current_page ?? 1;
+        lastPage.value    = res.data.last_page ?? 1;
+        perPage.value     = res.data.per_page ?? 10;
+      } else {
+        categories.value = Array.isArray(res.data) ? res.data : [];
+      }
     } catch (error) {
-      console.error("loadCategories:", error);
       notify.toastError("Không tải được danh sách danh mục");
     }
   };
@@ -100,6 +112,10 @@ export const useCategories = defineStore("categories", () => {
 
   return {
     categories,
+    total,
+    currentPage,
+    lastPage, 
+    perPage,
     loadCategories,
     createCategory,
     updateCategory,
