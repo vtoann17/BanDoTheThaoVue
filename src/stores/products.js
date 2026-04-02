@@ -77,6 +77,16 @@ export const useProducts = defineStore("products", () => {
             return null;
         }
     };
+    const getProductDetail = async (slug) => {
+        try {
+            const res = await axios.get(`${apiBase}/products/${slug}/detail`);
+            return res.data.data ?? res.data;
+        } catch (error) {
+            console.error(error);
+            notify.toastError("Không tải được chi tiết sản phẩm");
+            return null;
+        }
+    };
     const updateProduct = async (id, formData) => {
         try {
             formData.append("_method", "PUT");
@@ -137,6 +147,7 @@ export const useProducts = defineStore("products", () => {
         loadProducts,
         createProduct,
         getProduct,
+        getProductDetail,
         updateProduct,
         deleteProduct,
     };

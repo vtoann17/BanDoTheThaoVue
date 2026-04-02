@@ -72,7 +72,7 @@ export const useVariants = defineStore("variants", () => {
 
   const updateVariant = async (id, data) => {
     try {
-      const res = await axios.put(`${apiBase}/variant/${id}`, data, {
+      const res = await axios.post(`${apiBase}/variant/${id}`, data, {
         headers: authHeaders(),
       });
       if (res.status === 200) {
