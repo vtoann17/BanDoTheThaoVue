@@ -80,7 +80,11 @@ const sizes = ['US 7','US 8','US 9','US 10','US 11','US 12']
   </footer>
 </template>
 <style scoped>
+* { box-sizing: border-box; margin: 0; padding: 0; list-style: none; }
+a { text-decoration: none; color: inherit; }
+
 .footer {
+  width: 100%;
   background: #1a1f2e;
   color: #9CA3AF;
   padding: 56px 48px 28px;
@@ -121,6 +125,8 @@ const sizes = ['US 7','US 8','US 9','US 10','US 11','US 12']
   border-radius: 8px;
   background: #2d3748;
   color: #9CA3AF;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -130,15 +136,20 @@ const sizes = ['US 7','US 8','US 9','US 10','US 11','US 12']
 
 .footer-col h4 {
   color: #fff;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: .5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   margin-bottom: 16px;
 }
 
-.footer-col ul li {
-  margin-bottom: 10px;
+.footer-col ul { list-style: none; padding: 0; margin: 0; }
+.footer-col ul li { margin-bottom: 10px; }
+.footer-col ul li a {
   font-size: 13px;
+  color: #9CA3AF;
+  text-decoration: none;
+  transition: color 0.15s;
 }
 .footer-col ul li a:hover { color: #fff; }
 
@@ -156,7 +167,20 @@ const sizes = ['US 7','US 8','US 9','US 10','US 11','US 12']
   display: flex;
   gap: 16px;
 }
-.footer-langs a { font-weight: 600; color: #6B7280; }
+.footer-langs a {
+  font-weight: 600;
+  color: #6B7280;
+  text-decoration: none;
+  transition: color 0.15s;
+}
 .footer-langs a:hover,
 .lang-active { color: #fff !important; }
+
+@media (max-width: 768px) {
+  .footer { padding: 40px 20px 24px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+}
+@media (max-width: 480px) {
+  .footer-grid { grid-template-columns: 1fr; }
+}
 </style>

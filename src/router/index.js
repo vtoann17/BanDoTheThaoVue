@@ -10,7 +10,8 @@ import ResetPassword from '@/views/auth/ResetPassword.vue'
 import IndexView from '../views/index.vue'
 import ProductView from '@/views/ProductView.vue'
 import ProductdetailView from '@/views/ProductdetailView.vue'
-import Checkout from '@/components/Checkout.vue'
+import Cart from "@/views/Cart.vue"
+import Checkout from '@/views/Checkout.vue'
 import ProductAdmin from '@/views/admin/products/ProductAdmin.vue'
 import ProductAdd from '@/views/admin/products/ProductAdd.vue'
 import ProductEdit from '@/views/admin/products/ProductEdit.vue'
@@ -37,16 +38,11 @@ import Address from '@/views/user/Address.vue'
 import Favorite from '@/views/user/Favorite.vue'
 import Coupon from '@/views/user/Coupon.vue'
 import OrderAdmin from '@/views/admin/OrderAdmin.vue'
-<<<<<<< HEAD
 import UserAdmin from '@/views/admin/users/UserAdmin.vue'
 import UserAdd from '@/views/admin/users/UserAdd.vue'
-=======
-import UserAdmin from '@/views/admin/UserAdmin.vue'
-import UserAdd from '@/views/admin/UserAdd.vue'
 import BrandAdmin from '@/views/admin/brands/BrandAdmin.vue'
 import BrandAdd from '@/views/admin/brands/BrandAdd.vue'
 import BrandEdit from '@/views/admin/brands/BrandEdit.vue'
->>>>>>> be57087c16f4886e268b921d7a3b44a7bad1bc50
 import Forbidden from '@/views/errors/Forbidden.vue'
 import { useAuth } from "@/stores/auth";
 import { useNotify } from "@/composables/useNotify";
@@ -74,9 +70,14 @@ const router = createRouter({
       component: ProductView, // component bạn tạo
     },
     {
-      path: "/productdetail", // đường dẫn URL
+      path: "/productdetail/:slug", // đường dẫn URL
       name: "productdetail",
       component: ProductdetailView, // component bạn tạo
+    },
+    {
+      path: "/cart", // đường dẫn URL
+      name: "cart",
+      component: Cart, // component bạn tạo
     },
     {
       path: "/checkout", // đường dẫn URL
@@ -181,7 +182,6 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-<<<<<<< HEAD
       path: "/subcategoryadmin",
       name: "subcategoryadmin",
       component: SubcategoryAdmin,
@@ -200,8 +200,6 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-=======
->>>>>>> be57087c16f4886e268b921d7a3b44a7bad1bc50
       path: "/profile",
       name: "profile",
       component: Profile,
@@ -241,20 +239,12 @@ const router = createRouter({
       name: "coupon",
       component: Coupon, // component bạn tạo
     },
-<<<<<<< HEAD
-=======
     {
       path: "/brandedit/:id", // Thêm :id để nhận tham số từ URL
       name: "brandedit",
       component: BrandEdit,
       meta: { requiresAuth: true, requiresAdmin: true } // Nên thêm bảo mật nếu là trang admin
     },
-    {
-      path: "/dashboard", // đường dẫn URL
-      name: "dashboard",
-      component: Dashboard, // component bạn tạo
-    },
->>>>>>> be57087c16f4886e268b921d7a3b44a7bad1bc50
      {
       path: "/orderadmin", // đường dẫn URL
       name: "orderadmin",
@@ -270,23 +260,21 @@ const router = createRouter({
       name: "useradmin",
       component: UserAdmin, // component bạn tạo
     },
-<<<<<<< HEAD
-    // {
-    //   path: "/brandadmin", // đường dẫn URL
-    //   name: "brandadmin",
-    //   component: BrandAdmin, // component bạn tạo
-    // },
-    //  {
-    //   path: "/brandadd", // đường dẫn URL
-    //   name: "brandadd",
-    //   component: BrandAdd, // component bạn tạo
-    // },
-    //  {
-    //   path: "/brandedit/:id", // đường dẫn URL
-    //   name: "brandedit",
-    //   component: BrandEdit, // component bạn tạo
-    // },
-=======
+    {
+      path: "/brandadmin", // đường dẫn URL
+      name: "brandadmin",
+      component: BrandAdmin, // component bạn tạo
+    },
+     {
+      path: "/brandadd", // đường dẫn URL
+      name: "brandadd",
+      component: BrandAdd, // component bạn tạo
+    },
+     {
+      path: "/brandedit/:id", // đường dẫn URL
+      name: "brandedit",
+      component: BrandEdit, // component bạn tạo
+    },
     {
       path: "/brandadmin", // đường dẫn URL
       name: "brandadmin",
@@ -297,7 +285,6 @@ const router = createRouter({
       name: "brandAdd",
       component: BrandAdd, // component bạn tạo
     },
->>>>>>> be57087c16f4886e268b921d7a3b44a7bad1bc50
     {
       path: "/auth/login", // đường dẫn URL
       name: "login",

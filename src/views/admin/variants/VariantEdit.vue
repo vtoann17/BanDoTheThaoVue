@@ -167,6 +167,7 @@ async function submitForm() {
       }
     });
     fd.append("img", imageFile.value);
+    fd.append("_method", "PUT");
 
     loading.value = true;
     const result = await variantStore.updateVariant(variantId, fd);
