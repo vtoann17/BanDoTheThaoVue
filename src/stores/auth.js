@@ -110,7 +110,6 @@ export const useAuth = defineStore("auth", () => {
 
     try {
       const res = await axios.get(`${apiBase}/getUser`);
-
       if (res.status === 200) {
         user.value = res.data;
       } else {
