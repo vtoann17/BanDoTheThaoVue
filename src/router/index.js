@@ -38,14 +38,18 @@ import Address from '@/views/user/Address.vue'
 import Favorite from '@/views/user/Favorite.vue'
 import Coupon from '@/views/user/Coupon.vue'
 import OrderAdmin from '@/views/admin/OrderAdmin.vue'
-import UserAdmin from '@/views/admin/users/UserAdmin.vue'
-import UserAdd from '@/views/admin/users/UserAdd.vue'
+import UserAdmin from '@/views/admin/user/UserAdmin.vue'
+import UserAdd from '@/views/admin/user/UserAdd.vue'
+import UserEdit from '@/views/admin/user/UserEdit.vue'
 import BrandAdmin from '@/views/admin/brands/BrandAdmin.vue'
 import BrandAdd from '@/views/admin/brands/BrandAdd.vue'
 import BrandEdit from '@/views/admin/brands/BrandEdit.vue'
 import Forbidden from '@/views/errors/Forbidden.vue'
 import { useAuth } from "@/stores/auth";
 import { useNotify } from "@/composables/useNotify";
+import CouponAdmin from '@/views/admin/coupon/CouponAdmin.vue'
+import CouponAdd from '@/views/admin/coupon/CouponAdd.vue'
+import CouponEdit from '@/views/admin/coupon/CouponEdit.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -249,16 +253,25 @@ const router = createRouter({
       path: "/orderadmin", // đường dẫn URL
       name: "orderadmin",
       component: OrderAdmin, // component bạn tạo
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
      {
       path: "/useradd", // đường dẫn URL
       name: "useradd",
       component: UserAdd, // component bạn tạo
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: "/useradmin", // đường dẫn URL
       name: "useradmin",
       component: UserAdmin, // component bạn tạo
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/useredit/:id", // đường dẫn URL
+      name: "useredit",
+      component: UserEdit, // component bạn tạo
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: "/brandadmin", // đường dẫn URL
@@ -284,6 +297,21 @@ const router = createRouter({
       path: "/brandAdd", // đường dẫn URL
       name: "brandAdd",
       component: BrandAdd, // component bạn tạo
+    },
+    {
+      path: "/couponadmin", // đường dẫn URL
+      name: "couponadmin",
+      component: CouponAdmin, // component bạn tạo
+    },
+    {
+      path: "/couponadd", // đường dẫn URL
+      name: "couponadd",
+      component: CouponAdd, // component bạn tạo
+    },
+    {
+      path: "/couponedit/:id", // đường dẫn URL
+      name: "couponedit",
+      component: CouponEdit, // component bạn tạo
     },
     {
       path: "/auth/login", // đường dẫn URL

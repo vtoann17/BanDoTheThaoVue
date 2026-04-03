@@ -4,7 +4,7 @@ import { ref } from "vue";
 import { useNotify } from "@/composables/useNotify";
 
 export const useBrands = defineStore("brands", () => {
-    const getToken = () =>JSON.parse(localStorage.getItem("auth") || "{}")?.token ?? null;
+    const getToken = () => JSON.parse(localStorage.getItem("auth") || "{}")?.token ?? null;
     const brands = ref([]);
     const notify = useNotify();
     const apiBase = import.meta.env.VITE_API_BASE;
@@ -12,7 +12,7 @@ export const useBrands = defineStore("brands", () => {
         Authorization: `Bearer ${getToken()}`,
     });
     const loadBrands = async () => {
-        try{
+        try {
             const res = await axios.get(`${apiBase}/brands`, {
                 headers: authHeaders(),
             });
@@ -42,7 +42,7 @@ export const useBrands = defineStore("brands", () => {
         }
     };
     const updateBrand = async (id, formData) => {
-        try{
+        try {
             formData.append("_method", "PUT");
 
             const res = await axios.post(`${apiBase}/brands/${id}`, formData, {
@@ -57,7 +57,7 @@ export const useBrands = defineStore("brands", () => {
                 notify.toastSuccess("Sửa thương hiệu thành công");
                 return res.data.data;
             }
-        }catch (error) {
+        } catch (error) {
             console.error("updateBrand:", error);
             const msg =
                 error.response?.data?.message || "Lỗi không sửa được thương hiệu";
@@ -65,29 +65,29 @@ export const useBrands = defineStore("brands", () => {
             return null;
         }
     };
-   const deleteBrand = async (id) => {
-  const confirmed = await notify.swalConfirm(
-    "Bạn có muốn xóa không?",
-    "Bạn chắc chắn chứ"
-  );
-  if (!confirmed) return false;
+    const deleteBrand = async (id) => {
+        const confirmed = await notify.swalConfirm(
+            "Bạn có muốn xóa không?",
+            "Bạn chắc chắn chứ"
+        );
+        if (!confirmed) return false;
 
-  try {
-    const res = await axios.delete(`${apiBase}/brands/${id}`, {
-      headers: authHeaders(),
-    });
+        try {
+            const res = await axios.delete(`${apiBase}/brands/${id}`, {
+                headers: authHeaders(),
+            });
 
-    if (res.status === 200 || res.status === 204) {
-      brands.value = brands.value.filter((b) => b.id !== id);
-      notify.toastSuccess("Xóa thương hiệu thành công");
-      return true;
-    }
-  } catch (error) {
-    console.error("deleteBrand:", error);
-    notify.toastError("Lỗi không xóa được thương hiệu");
-    return false;
-  }
-};
+            if (res.status === 200 || res.status === 204) {
+                brands.value = brands.value.filter((b) => b.id !== id);
+                notify.toastSuccess("Xóa thương hiệu thành công");
+                return true;
+            }
+        } catch (error) {
+            console.error("deleteBrand:", error);
+            notify.toastError("Lỗi không xóa được thương hiệu");
+            return false;
+        }
+    };
 
     return {
         brands,

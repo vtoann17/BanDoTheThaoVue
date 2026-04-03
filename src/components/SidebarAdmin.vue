@@ -83,17 +83,24 @@
       <router-link to="/brandadmin" class="nav-item">
         <i class="bi bi-bookmark-star"></i> Thương hiệu
       </router-link>
+      
+      <router-link to="/brandadmin" class="nav-item">
+        <i class="bi bi-tags"></i>
+        Thương hiệu
+      </router-link>
 
       <router-link to="/" class="nav-item">
         <i class="bi bi-cart"></i> Đơn hàng
       </router-link>
 
-      <router-link to="/profile" class="nav-item">
-        <i class="bi bi-people"></i> Người dùng
+      <router-link to="/useradmin" class="nav-item">
+        <i class="bi bi-people"></i>
+        Người dùng
       </router-link>
 
-      <router-link to="/" class="nav-item">
-        <i class="bi bi-ticket-perforated"></i> Mã giảm giá
+      <router-link to="/couponadmin" class="nav-item">
+        <i class="bi bi-ticket-perforated"></i>
+        Mã giảm giá
       </router-link>
     </nav>
 
