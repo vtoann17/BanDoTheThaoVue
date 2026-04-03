@@ -2,25 +2,10 @@
 import AppHeader from "../components/AppHeader.vue"
 import AppFooter from '../components/AppFooter.vue';
 import ProductList from "../components/ProductList.vue";
+import CategoryList from '../components/CategoryList.vue'
 import { onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
-
-const categories = [
-  { id: 1, name: 'Giày chạy bộ',    icon: 'bi-wind',            count: '120+ sản phẩm', color: '#EFF6FF', accent: '#1565C0' },
-  { id: 2, name: 'Áo thể thao',     icon: 'bi-person-arms-up',  count: '85+ sản phẩm',  color: '#FFF7ED', accent: '#FF6D00' },
-  { id: 3, name: 'Quần tập luyện',  icon: 'bi-stars',           count: '60+ sản phẩm',  color: '#F0FDF4', accent: '#16A34A' },
-  { id: 4, name: 'Bóng & dụng cụ', icon: 'bi-dribbble',        count: '95+ sản phẩm',  color: '#FDF4FF', accent: '#9333EA' },
-  { id: 5, name: 'Phụ kiện',        icon: 'bi-bag-heart',       count: '200+ sản phẩm', color: '#FFF1F2', accent: '#E11D48' },
-  { id: 6, name: 'Thiết bị gym',    icon: 'bi-trophy',          count: '40+ sản phẩm',  color: '#FFFBEB', accent: '#D97706' },
-]
-
-const products = [
-  { id: 1, cat: 'CHẠY BỘ CHUYÊN NGHIỆP', name: 'SpeedMax Elite 5',  price: '4.500.000₫', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' },
-  { id: 2, cat: 'ĐỒ TẬP LUYỆN',          name: 'Aero-Cool Tee',     price: '1.100.000₫', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&q=80' },
-  { id: 3, cat: 'BÓNG RỔ',               name: 'Hoops Pro VII',     price: '3.250.000₫', img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&q=80' },
-  { id: 4, cat: 'TRANG THIẾT BỊ',        name: 'Pro Match Ball',    price: '1.500.000₫', img: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=400&q=80' },
-]
 
 const sports = [
   { name: 'Chạy bộ', desc: 'Bền bỉ trên mọi cung đường.',    img: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=800&q=80' },
@@ -65,34 +50,7 @@ onMounted(() => {
   </section>
 
   <!-- ── DANH MỤC SẢN PHẨM ── -->
-  <section class="section categories-section">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Danh Mục Sản Phẩm</h2>
-        <div class="title-bar"></div>
-      </div>
-      <a href="#" class="see-all">Xem tất cả &nbsp;→</a>
-    </div>
-
-    <div class="categories-grid">
-      <a
-        v-for="cat in categories"
-        :key="cat.id"
-        href="#"
-        class="cat-card"
-        :style="{ '--cat-bg': cat.color, '--cat-accent': cat.accent }"
-      >
-        <div class="cat-icon-wrap">
-          <i :class="['bi', cat.icon, 'cat-icon']"></i>
-        </div>
-        <div class="cat-info">
-          <p class="cat-name">{{ cat.name }}</p>
-          <p class="cat-count">{{ cat.count }}</p>
-        </div>
-        <span class="cat-arrow">→</span>
-      </a>
-    </div>
-  </section>
+  <CategoryList/>
 
   <ProductList/>
 

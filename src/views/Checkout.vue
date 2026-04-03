@@ -1,19 +1,22 @@
+
+<script setup>
+import { reactive, ref } from 'vue'
+import AppHeader from "../components/AppHeader.vue";
+import AppFooter from "../components/AppFooter.vue";
+
+const form = reactive({
+  fullName: 'Nguyễn Văn A',
+  email: 'example@gmail.com',
+  phone: '090 123 4567'
+})
+
+const paymentMethod = ref('vnpay')
+</script>
+
+
 <template>
   <div class="checkout-page">
-    <header class="header">
-      <div class="container header-inner">
-        <div class="logo-group">
-          <svg class="icon-logo" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>
-          </svg>
-          <span class="logo-text">SportGear</span>
-        </div>
-        <div class="security-badge">
-          <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-          Thanh toán bảo mật SSL
-        </div>
-      </div>
-    </header>
+    <AppHeader/>
 
     <main class="main-content container">
       <nav class="breadcrumbs">
@@ -197,36 +200,9 @@
       </div>
     </main>
 
-    <footer class="footer">
-      <div class="container footer-inner">
-        <div class="footer-brand">
-          <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-          An tâm mua sắm tại SportGear
-        </div>
-        <div class="footer-links">
-          <a href="#">Chính sách bảo mật</a>
-          <a href="#">Điều khoản dịch vụ</a>
-          <a href="#">Liên hệ</a>
-        </div>
-        <div class="footer-copyright">
-          © 2024 SportGear Inc. Bảo lưu mọi quyền.
-        </div>
-      </div>
-    </footer>
+    <AppFooter/>
   </div>
 </template>
-
-<script setup>
-import { reactive, ref } from 'vue'
-
-const form = reactive({
-  fullName: 'Nguyễn Văn A',
-  email: 'example@gmail.com',
-  phone: '090 123 4567'
-})
-
-const paymentMethod = ref('vnpay')
-</script>
 
 <style scoped>
 /* Reset & Base Setup */

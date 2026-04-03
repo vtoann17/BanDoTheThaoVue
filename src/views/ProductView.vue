@@ -1,487 +1,631 @@
 <script setup>
-import AppFooter from '@/components/AppFooter.vue';
-import { ref, computed } from 'vue'
-import AppHeader from '../components/AppHeader.vue';
+import AppFooter from '@/components/AppFooter.vue'
+import AppHeader from '@/components/AppHeader.vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useProducts } from '@/stores/products'
+import { useCategories } from '@/stores/categories'
+import { useSubcategories } from '@/stores/subcategory'
+import { storeToRefs } from 'pinia'
 
-const brands = ref([
-  { id: 1, name: 'Nike',          checked: true },
-  { id: 2, name: 'Adidas',        checked: true },
-  { id: 3, name: 'Puma',          checked: false },
-  { id: 4, name: 'Under Armour',  checked: false },
-])
+const route  = useRoute()
+const router = useRouter()
 
-const selectedSize = ref('US 8')
+const productStore     = useProducts()
+const categoryStore    = useCategories()
+const subcategoryStore = useSubcategories()
 
-const colors = [
-  { id:'black',  hex:'#111827' },
-  { id:'gray',   hex:'#9CA3AF' },
-  { id:'red',    hex:'#EF4444' },
-  { id:'blue',   hex:'#3B82F6' },
-  { id:'green',  hex:'#22C55E' },
-  { id:'yellow', hex:'#F59E0B' },
+const { categories }    = storeToRefs(categoryStore)
+const { subcategories } = storeToRefs(subcategoryStore)
+
+const baseUrl = import.meta.env.VITE_API_BASE.replace('/api', '')
+
+/* ── FILTER STATE ── */
+const selectedCategoryId    = ref(route.query.category_id    ? Number(route.query.category_id)    : null)
+const selectedSubcategoryId = ref(route.query.subcategory_id ? Number(route.query.subcategory_id) : null)
+const selectedBrandId       = ref(route.query.brand_id       ? Number(route.query.brand_id)       : null)
+const priceMin              = ref(Number(route.query.min_price) || 0)
+const priceMax              = ref(Number(route.query.max_price) || 50000000)
+const sortBy                = ref(route.query.sort_by  ?? 'id')
+const sortDir               = ref(route.query.sort_dir ?? 'desc')
+const showSort              = ref(false)
+const currentPage           = ref(Number(route.query.page) || 1)
+
+const expandedCats = ref(new Set())
+const liked        = ref(new Set())
+const loading      = ref(false)
+
+/* Brands từ subcategory store hoặc product data */
+const brandList = computed(() => {
+  const map = new Map()
+  productStore.products.forEach(p => {
+    if (p.brand) map.set(p.brand.id, p.brand)
+  })
+  return [...map.values()]
+})
+
+/* Group subs theo category_id */
+const subsByCategory = computed(() => {
+  const map = {}
+  subcategories.value.forEach(s => {
+    if (!map[s.category_id]) map[s.category_id] = []
+    map[s.category_id].push(s)
+  })
+  return map
+})
+
+const sortOptions = [
+  { label: 'Mới nhất',     sort_by: 'id',         sort_dir: 'desc' },
+  { label: 'Cũ nhất',      sort_by: 'id',         sort_dir: 'asc'  },
+  { label: 'Giá tăng dần', sort_by: 'price',      sort_dir: 'asc'  },
+  { label: 'Giá giảm dần', sort_by: 'price',      sort_dir: 'desc' },
+  { label: 'Tên A–Z',      sort_by: 'name',       sort_dir: 'asc'  },
+  { label: 'Tên Z–A',      sort_by: 'name',       sort_dir: 'desc' },
 ]
-const selectedColor = ref('black')
 
-const priceMax = ref(10000000)
+const sortLabel = computed(() =>
+  sortOptions.find(o => o.sort_by === sortBy.value && o.sort_dir === sortDir.value)?.label ?? 'Mới nhất'
+)
 
-const activeFilters = ref(['Nike','Chạy bộ','Tập luyện'])
-function removeFilter(f){ activeFilters.value = activeFilters.value.filter(x=>x!==f) }
-function clearAll(){ activeFilters.value = [] }
+/* ── FETCH — đúng param backend ── */
+const fetchProducts = async () => {
+  loading.value = true
 
-const sortOptions = ['Mới nhất','Giá tăng dần','Giá giảm dần','Phổ biến nhất']
-const sortSelected = ref('Mới nhất')
-const showSort = ref(false)
+  const params = {
+    per_page: 20,
+    page:     currentPage.value,
+    sort_by:  sortBy.value,
+    sort_dir: sortDir.value,
+    status:   1,
+  }
 
-const products = [
-  { id:1,  badge:'Mới',      badgeColor:'#3B82F6', cat:'CHẠY BỘ',    name:'Nike Air Max Pro',            desc:'Đệm lót hiệu suất cao, êm ái từng bước chạy',           price:'3.250.000đ', oldPrice:null,        img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80', liked:false },
-  { id:2,  badge:null,       badgeColor:null,       cat:'PHỤ KIỆN',   name:'Elite Fitness Tracker',       desc:'Theo dõi nhịp tim và giấc ngủ chính xác',               price:'4.975.000đ', oldPrice:'6.225.000đ', img:'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', liked:false },
-  { id:3,  badge:'Giảm 10%', badgeColor:'#3B82F6', cat:'TẬP LUYỆN',  name:'Adidas Speedflow',            desc:'Độ bám cực tốt cho các bài tập cường độ cao',            price:'2.250.000đ', oldPrice:null,        img:'https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=500&q=80', liked:false },
-  { id:4,  badge:null,       badgeColor:null,       cat:'TRANG PHỤC', name:'Bộ đồ tập Zenith',            desc:'Chất liệu cao cấp, co giãn 4 chiều',                    price:'1.875.000đ', oldPrice:null,        img:'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&q=80', liked:false },
-  { id:5,  badge:null,       badgeColor:null,       cat:'BÓNG RỔ',   name:'Court King IV',               desc:'Hỗ trợ cổ chân tối đa, đệm bám đột phá',               price:'3.875.000đ', oldPrice:null,        img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80', liked:false },
-  { id:6,  badge:null,       badgeColor:null,       cat:'TRANG PHỤC', name:'Áo vest chạy bộ AeroShift',  desc:'Thoáng khí, nhẹ như không mặc',                         price:'1.125.000đ', oldPrice:null,        img:'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80', liked:false },
-]
+  if (selectedSubcategoryId.value) params.subcategory_id = selectedSubcategoryId.value
+  if (selectedBrandId.value)       params.brand_id       = selectedBrandId.value
+  if (priceMin.value > 0)          params.min_price      = priceMin.value
+  if (priceMax.value < 50000000)   params.max_price      = priceMax.value
 
-const likedMap = ref({})
-function toggleLike(id){ likedMap.value[id] = !likedMap.value[id] }
+  await productStore.loadProducts(params)
+  loading.value = false
+}
 
-const currentPage = ref(1)
-const pages = [1,2,3,'...',12]
+onMounted(async () => {
+  await Promise.all([
+    categoryStore.loadCategories(),
+    subcategoryStore.loadSubcategories({ per_page: 999 }),
+    fetchProducts(),
+  ])
+  if (selectedCategoryId.value) expandedCats.value.add(selectedCategoryId.value)
+})
+
+/* Sync URL → state */
+watch(() => route.query, (q) => {
+  selectedCategoryId.value    = q.category_id    ? Number(q.category_id)    : null
+  selectedSubcategoryId.value = q.subcategory_id ? Number(q.subcategory_id) : null
+  selectedBrandId.value       = q.brand_id       ? Number(q.brand_id)       : null
+  priceMin.value              = Number(q.min_price) || 0
+  priceMax.value              = Number(q.max_price) || 50000000
+  sortBy.value                = q.sort_by  ?? 'id'
+  sortDir.value               = q.sort_dir ?? 'desc'
+  currentPage.value           = Number(q.page) || 1
+  fetchProducts()
+}, { deep: true })
+
+/* ── BUILD QUERY URL ── */
+const buildQuery = () => {
+  const q = { page: 1 }
+  if (selectedCategoryId.value)    q.category_id    = selectedCategoryId.value
+  if (selectedSubcategoryId.value) q.subcategory_id = selectedSubcategoryId.value
+  if (selectedBrandId.value)       q.brand_id       = selectedBrandId.value
+  if (priceMin.value > 0)          q.min_price      = priceMin.value
+  if (priceMax.value < 50000000)   q.max_price      = priceMax.value
+  if (sortBy.value !== 'id' || sortDir.value !== 'desc') {
+    q.sort_by  = sortBy.value
+    q.sort_dir = sortDir.value
+  }
+  return q
+}
+
+const applyFilter = () => {
+  currentPage.value = 1
+  router.push({ query: buildQuery() })
+}
+
+/* ── ACTIONS ── */
+const toggleCategory = (catId) => {
+  const s = new Set(expandedCats.value)
+  s.has(catId) ? s.delete(catId) : s.add(catId)
+  expandedCats.value = s
+}
+
+const selectCategory = (catId) => {
+  if (selectedCategoryId.value === catId) {
+    selectedCategoryId.value    = null
+    selectedSubcategoryId.value = null
+  } else {
+    selectedCategoryId.value    = catId
+    selectedSubcategoryId.value = null
+    expandedCats.value          = new Set([catId])
+  }
+  applyFilter()
+}
+
+const selectSubcategory = (subId) => {
+  selectedSubcategoryId.value = selectedSubcategoryId.value === subId ? null : subId
+  applyFilter()
+}
+
+const selectBrand = (brandId) => {
+  selectedBrandId.value = selectedBrandId.value === brandId ? null : brandId
+  applyFilter()
+}
+
+const setSort = (opt) => {
+  sortBy.value  = opt.sort_by
+  sortDir.value = opt.sort_dir
+  showSort.value = false
+  applyFilter()
+}
+
+const setPage = (p) => {
+  if (typeof p !== 'number') return
+  currentPage.value = p
+  router.push({ query: { ...buildQuery(), page: p } })
+}
+
+const clearAll = () => {
+  selectedCategoryId.value    = null
+  selectedSubcategoryId.value = null
+  selectedBrandId.value       = null
+  priceMin.value              = 0
+  priceMax.value              = 50000000
+  sortBy.value                = 'id'
+  sortDir.value               = 'desc'
+  expandedCats.value          = new Set()
+  router.push({ query: {} })
+}
+
+/* ── HELPERS ── */
+const toggleLike = (id) => {
+  const s = new Set(liked.value)
+  s.has(id) ? s.delete(id) : s.add(id)
+  liked.value = s
+}
+
+const fmt = (n) => Number(n).toLocaleString('vi-VN') + '₫'
+const imgUrl = (path) => path ? `${baseUrl}/storage/${path}` : ''
+
+const displayPrice = (p) => {
+  const price  = parseFloat(p.price ?? 0)
+  const sale   = p.sale ?? 0
+  const now    = new Date()
+  const inSale =
+    sale > 0 &&
+    (!p.start || new Date(p.start) <= now) &&
+    (!p.end   || new Date(p.end)   >= now)
+  return inSale
+    ? { sale, discounted: +(price * (1 - sale / 100)).toFixed(0), original: price }
+    : { sale: 0, discounted: null, original: price }
+}
+
+/* Active tags */
+const activeFilterTags = computed(() => {
+  const tags = []
+  if (selectedCategoryId.value) {
+    const cat = categories.value.find(c => c.id === selectedCategoryId.value)
+    if (cat) tags.push({ label: cat.name, clear: () => { selectedCategoryId.value = null; selectedSubcategoryId.value = null; applyFilter() } })
+  }
+  if (selectedSubcategoryId.value) {
+    const sub = subcategories.value.find(s => s.id === selectedSubcategoryId.value)
+    if (sub) tags.push({ label: sub.name, clear: () => { selectedSubcategoryId.value = null; applyFilter() } })
+  }
+  if (selectedBrandId.value) {
+    const brand = brandList.value.find(b => b.id === selectedBrandId.value)
+    if (brand) tags.push({ label: brand.name, clear: () => { selectedBrandId.value = null; applyFilter() } })
+  }
+  if (priceMin.value > 0 || priceMax.value < 50000000) {
+    tags.push({ label: `${fmt(priceMin.value)} – ${fmt(priceMax.value)}`, clear: () => { priceMin.value = 0; priceMax.value = 50000000; applyFilter() } })
+  }
+  return tags
+})
+
+/* Pagination */
+const pages = computed(() => {
+  const last = productStore.lastPage
+  if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1)
+  const cur = currentPage.value
+  const arr = [1]
+  if (cur > 3) arr.push('...')
+  for (let i = Math.max(2, cur - 1); i <= Math.min(last - 1, cur + 1); i++) arr.push(i)
+  if (cur < last - 2) arr.push('...')
+  arr.push(last)
+  return arr
+})
 </script>
 
 <template>
   <div class="app">
+    <AppHeader />
 
-  <AppHeader/>
-
-    <!-- ══ BREADCRUMB ══ -->
     <div class="breadcrumb">
-      <a href="#">Trang chủ</a>
+      <router-link to="/">Trang chủ</router-link>
       <span class="sep">/</span>
-      <a href="#">Trang phục</a>
-      <span class="sep">/</span>
-      <span class="bc-current">Giày thể thao</span>
+      <span class="bc-current">Sản phẩm</span>
     </div>
 
-    <!-- ══ PAGE HEADER ══ -->
     <div class="page-header">
       <div>
-        <h1 class="page-title">Giày Thể Thao &amp; Đồ Tập</h1>
-        <p class="page-sub">Khám phá 1.240 sản phẩm hiệu suất đỉnh cao cho hành trình của bạn</p>
+        <h1 class="">Giày Thể Thao &amp; Đồ Tập</h1>
+        <p class="page-sub">{{ loading ? 'Đang tải...' : `${productStore.total} sản phẩm` }}</p>
       </div>
       <div class="sort-wrap">
         <span class="sort-label">Sắp xếp:</span>
-        <div class="sort-select" @click="showSort=!showSort">
-          <span>{{ sortSelected }}</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <div class="sort-select" @click="showSort = !showSort">
+          <span>{{ sortLabel }}</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           <div class="sort-dropdown" v-if="showSort">
-            <div v-for="o in sortOptions" :key="o" class="sort-opt" :class="{active:o===sortSelected}" @click.stop="sortSelected=o;showSort=false">{{ o }}</div>
+            <div v-for="o in sortOptions" :key="o.label" class="sort-opt"
+              :class="{ active: o.sort_by === sortBy && o.sort_dir === sortDir }"
+              @click.stop="setSort(o)">{{ o.label }}</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ══ BODY ══ -->
     <div class="body-wrap">
 
-      <!-- ── SIDEBAR ── -->
+      <!-- ══ SIDEBAR ══ -->
       <aside class="sidebar">
 
-        <!-- Brand -->
+        <!-- DANH MỤC -->
         <div class="filter-block">
-          <div class="filter-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            THƯƠNG HIỆU
-          </div>
-          <div v-for="b in brands" :key="b.id" class="check-row" @click="b.checked=!b.checked">
-            <div class="custom-check" :class="{checked:b.checked}">
-              <svg v-if="b.checked" width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <span>{{ b.name }}</span>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <!-- Size -->
-        <div class="filter-block">
-          <div class="filter-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-            KÍCH CỠ
-          </div>
-          <div class="size-grid">
-            <button
-              v-for="s in sizes" :key="s"
-              class="size-btn"
-              :class="{selected: selectedSize===s}"
-              @click="selectedSize=s"
-            >{{ s }}</button>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <!-- Color -->
-        <div class="filter-block">
-          <div class="filter-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 10 10 0 0 0 0-20"/></svg>
-            MÀU SẮC
-          </div>
-          <div class="color-row">
-            <button
-              v-for="c in colors" :key="c.id"
-              class="color-dot"
-              :class="{selected: selectedColor===c.id}"
-              :style="{background: c.hex}"
-              @click="selectedColor=c.id"
-            ></button>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <!-- Price -->
-        <div class="filter-block">
-          <div class="filter-title">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            KHOẢNG GIÁ
-          </div>
-          <div class="price-range">
-            <input type="range" min="0" max="10000000" v-model="priceMax" class="range-slider"/>
-            <div class="price-labels">
-              <span>0đ</span>
-              <span class="price-max">{{ Number(priceMax).toLocaleString('vi-VN') }}đ</span>
-            </div>
-          </div>
-        </div>
-
-        <button class="btn-apply">ÁP DỤNG BỘ LỌC</button>
-      </aside>
-
-      <!-- ── MAIN ── -->
-      <main class="main-area">
-
-        <!-- Active filters -->
-        <div class="active-filters" v-if="activeFilters.length">
-          <span v-for="f in activeFilters" :key="f" class="filter-tag">
-            {{ f }}
-            <button @click="removeFilter(f)">
-              <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </button>
-          </span>
-          <button class="clear-all" @click="clearAll">XÓA TẤT CẢ</button>
-        </div>
-
-        <!-- Products grid -->
-        <div class="products-grid">
-          <div v-for="p in products" :key="p.id" class="product-card">
-            <div class="card-img-wrap">
-              <img :src="p.img" :alt="p.name" loading="lazy"/>
-              <span v-if="p.badge" class="card-badge" :style="{background: p.badgeColor}">{{ p.badge }}</span>
-              <button class="like-btn" @click="toggleLike(p.id)" :class="{liked: likedMap[p.id]}">
-                <svg width="16" height="16" viewBox="0 0 24 24" :fill="likedMap[p.id]?'#EF4444':'none'" stroke="#374151" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <p class="filter-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Danh mục
+          </p>
+          <div v-for="cat in categories" :key="cat.id" class="cat-tree-item">
+            <div class="cat-row" :class="{ 'cat-active': selectedCategoryId === cat.id }">
+              <div class="cat-row-left" @click="selectCategory(cat.id)">
+                <div class="cat-dot" :class="{ active: selectedCategoryId === cat.id }"></div>
+                <img v-if="cat.image" :src="imgUrl(cat.image)" :alt="cat.name" class="cat-thumb"/>
+                <span class="cat-row-name">{{ cat.name }}</span>
+              </div>
+              <button v-if="subsByCategory[cat.id]?.length" class="cat-toggle" @click.stop="toggleCategory(cat.id)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  :style="{ transform: expandedCats.has(cat.id) ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform .2s' }">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
               </button>
             </div>
-            <div class="card-body">
-              <p class="card-cat">{{ p.cat }}</p>
-              <p class="card-name">{{ p.name }}</p>
-              <p class="card-desc">{{ p.desc }}</p>
-              <div class="card-foot">
-                <div class="price-block">
-                  <span class="card-price">{{ p.price }}</span>
-                  <span v-if="p.oldPrice" class="old-price">{{ p.oldPrice }}</span>
-                </div>
-                <button class="add-cart-btn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                </button>
+            <div v-if="expandedCats.has(cat.id) && subsByCategory[cat.id]?.length" class="sub-list">
+              <div v-for="sub in subsByCategory[cat.id]" :key="sub.id"
+                class="sub-row" :class="{ 'sub-active': selectedSubcategoryId === sub.id }"
+                @click="selectSubcategory(sub.id)">
+                <span class="sub-dash">—</span>
+                <span class="sub-name">{{ sub.name }}</span>
+                <span v-if="selectedSubcategoryId === sub.id" class="sub-check">✓</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination">
-          <button class="pg-btn">
+        <div class="divider"/>
+
+        <!-- THƯƠNG HIỆU -->
+        <div class="filter-block" v-if="brandList.length">
+          <p class="filter-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2.2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Thương hiệu
+          </p>
+          <div v-for="brand in brandList" :key="brand.id" class="check-row" @click="selectBrand(brand.id)">
+            <div class="custom-check" :class="{ checked: selectedBrandId === brand.id }">
+              <svg v-if="selectedBrandId === brand.id" width="10" height="10" viewBox="0 0 12 12" fill="none">
+                <polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span>{{ brand.name }}</span>
+          </div>
+        </div>
+
+        <div class="divider" v-if="brandList.length"/>
+
+        <!-- KHOẢNG GIÁ -->
+        <div class="filter-block">
+          <p class="filter-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Khoảng giá
+          </p>
+          <div class="price-inputs">
+            <div class="price-input-wrap">
+              <span class="price-currency">₫</span>
+              <input type="number" placeholder="Từ" :value="priceMin"
+                @input="priceMin = Math.max(0, Number($event.target.value))"
+                class="price-input" min="0"/>
+            </div>
+            <span class="price-dash">—</span>
+            <div class="price-input-wrap">
+              <span class="price-currency">₫</span>
+              <input type="number" placeholder="Đến" :value="priceMax"
+                @input="priceMax = Math.max(priceMin + 1000, Number($event.target.value))"
+                class="price-input"/>
+            </div>
+          </div>
+
+          <div class="range-wrap">
+            <div class="range-track">
+              <div class="range-fill" :style="{
+                left:  (priceMin / 50000000 * 100) + '%',
+                width: ((priceMax - priceMin) / 50000000 * 100) + '%'
+              }"></div>
+            </div>
+            <input type="range" min="0" max="50000000" step="100000" :value="priceMin"
+              @input="priceMin = Math.min(Number($event.target.value), priceMax - 100000)"
+              class="range-slider"/>
+            <input type="range" min="0" max="50000000" step="100000" :value="priceMax"
+              @input="priceMax = Math.max(Number($event.target.value), priceMin + 100000)"
+              class="range-slider"/>
+          </div>
+
+          <div class="price-labels">
+            <span class="price-val">{{ fmt(priceMin) }}</span>
+            <span class="price-val blue">{{ fmt(priceMax) }}</span>
+          </div>
+
+          <div class="price-quick">
+            <button v-for="q in [
+              { label: 'Dưới 500k',  min: 0,       max: 500000   },
+              { label: '500k–2tr',   min: 500000,  max: 2000000  },
+              { label: '2tr–5tr',    min: 2000000, max: 5000000  },
+              { label: 'Trên 5tr',   min: 5000000, max: 50000000 },
+            ]" :key="q.label"
+              class="price-q-btn"
+              :class="{ active: priceMin === q.min && priceMax === q.max }"
+              @click="priceMin = q.min; priceMax = q.max">
+              {{ q.label }}
+            </button>
+          </div>
+        </div>
+
+        <button class="btn-apply" @click="applyFilter">Áp dụng bộ lọc</button>
+        <button v-if="activeFilterTags.length" class="btn-reset" @click="clearAll">Xóa tất cả bộ lọc</button>
+      </aside>
+
+      <!-- ══ MAIN ══ -->
+      <main class="main-area">
+
+        <!-- Active tags -->
+        <div class="active-filters" v-if="activeFilterTags.length">
+          <span v-for="(tag, i) in activeFilterTags" :key="i" class="filter-tag">
+            {{ tag.label }}
+            <button @click="tag.clear()">
+              <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                <line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </span>
+          <button class="clear-all" @click="clearAll">Xóa tất cả</button>
+        </div>
+
+        <!-- SKELETON -->
+        <div v-if="loading" class="products-grid">
+          <div v-for="i in 8" :key="i" class="product-card skeleton">
+            <div class="prod-img-wrap skel-img"></div>
+            <div class="prod-body">
+              <div class="skel-line short"></div>
+              <div class="skel-line"></div>
+              <div class="skel-line mid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMPTY -->
+        <div v-else-if="productStore.products.length === 0" class="empty-state">
+          <svg viewBox="0 0 64 64" fill="none" width="52" height="52">
+            <circle cx="32" cy="32" r="30" stroke="#E5E7EB" stroke-width="2"/>
+            <path d="M20 20l24 24M44 20L20 44" stroke="#D1D5DB" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <p>Không tìm thấy sản phẩm nào</p>
+          <button class="btn-reset inline" @click="clearAll">Xóa bộ lọc</button>
+        </div>
+
+        <!-- GRID -->
+        <div v-else class="products-grid">
+          <router-link v-for="p in productStore.products" :key="p.id"
+            :to="`/productdetail/${p.slug}`" class="product-card">
+            <div class="prod-img-wrap">
+              <img :src="imgUrl(p.image)" :alt="p.name" loading="lazy"/>
+              <span v-if="(p.sale ?? 0) > 0" class="card-badge">-{{ p.sale }}%</span>
+              <button class="like-btn" :class="{ active: liked.has(p.id) }" @click.prevent="toggleLike(p.id)">
+                <svg viewBox="0 0 24 24" width="15" height="15">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                    :fill="liked.has(p.id) ? '#ef4444' : 'none'"
+                    :stroke="liked.has(p.id) ? '#ef4444' : '#fff'" stroke-width="1.8"/>
+                </svg>
+              </button>
+            </div>
+            <div class="prod-body">
+              <p class="prod-cat">{{ p.subcategory?.name ?? '' }}</p>
+              <p class="prod-name">{{ p.name }}</p>
+              <div class="prod-foot">
+                <div>
+                  <template v-if="displayPrice(p).sale > 0">
+                    <p class="prod-price sale">{{ fmt(displayPrice(p).discounted) }}</p>
+                    <p class="old-price">{{ fmt(displayPrice(p).original) }}</p>
+                  </template>
+                  <p v-else class="prod-price">{{ fmt(displayPrice(p).original) }}</p>
+                </div>
+                <div class="cart-btn">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <path d="M16 10a4 4 0 0 1-8 0"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </router-link>
+        </div>
+
+        <!-- PAGINATION -->
+        <div class="pagination" v-if="productStore.lastPage > 1">
+          <button class="pg-btn" :disabled="currentPage === 1" @click="setPage(currentPage - 1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <template v-for="p in pages" :key="p">
-            <button
-              class="pg-btn"
-              :class="{active: p===currentPage, dots: p==='...'}"
-              @click="typeof p==='number' && (currentPage=p)"
-            >{{ p }}</button>
+            <button class="pg-btn" :class="{ active: p === currentPage, dots: p === '...' }" @click="setPage(p)">{{ p }}</button>
           </template>
-          <button class="pg-btn">
+          <button class="pg-btn" :disabled="currentPage === productStore.lastPage" @click="setPage(currentPage + 1)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
       </main>
     </div>
 
-    <!-- ══ FOOTER TOP ══ -->
-    
-
-    <!-- ══ FOOTER BOTTOM ══ -->
     <AppFooter/>
-
   </div>
 </template>
 
 <style scoped>
-/* ── RESET ── */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-a{text-decoration:none;color:inherit}
-button{font-family:inherit;cursor:pointer;border:none;background:none}
-input{font-family:inherit}
-img{display:block;width:100%;height:100%;object-fit:cover}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+a { text-decoration: none; color: inherit; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-.app{
-  min-height:100vh;
-  background:#fff;
-  font-family:'Be Vietnam Pro',sans-serif;
-  color:#111827;
-}
+.app { min-height: 100vh; background: #fff; font-family: 'Be Vietnam Pro', sans-serif; color: #111827; }
 
-/* ══ NAVBAR ══ */
-.navbar{
-  display:flex;align-items:center;justify-content:space-between;
-  height:60px;padding:0 32px;
-  background:#fff;border-bottom:1px solid #E5E7EB;
-  position:sticky;top:0;z-index:200;
-}
-.nav-left{display:flex;align-items:center;gap:28px}
-.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:17px;color:#1D4ED8}
-.nav-link{font-size:14px;font-weight:500;color:#374151}
-.nav-link:hover{color:#1D4ED8}
-.sale-link{color:#EF4444;font-weight:600}
-.nav-right{display:flex;align-items:center;gap:12px}
-.search-box{
-  display:flex;align-items:center;gap:8px;
-  background:#F9FAFB;border:1px solid #E5E7EB;border-radius:24px;
-  padding:7px 16px;width:220px;
-}
-.search-box input{border:none;background:transparent;font-size:13px;color:#374151;width:100%;outline:none}
-.search-box input::placeholder{color:#9CA3AF}
-.icon-btn{display:flex;align-items:center;justify-content:center;padding:4px}
-.pos-rel{position:relative}
-.nav-badge{
-  position:absolute;top:-4px;right:-4px;
-  background:#1D4ED8;color:#fff;font-size:9px;font-weight:700;
-  width:15px;height:15px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-}
+.breadcrumb { padding: 14px 48px; font-size: 12.5px; color: #9CA3AF; display: flex; align-items: center; gap: 6px; }
+.breadcrumb a { color: #9CA3AF; }
+.breadcrumb a:hover { color: #1565C0; }
+.sep { color: #D1D5DB; }
+.bc-current { color: #111827; font-weight: 600; }
 
-/* ══ BREADCRUMB ══ */
-.breadcrumb{
-  padding:14px 32px;font-size:12.5px;color:#9CA3AF;
-  display:flex;align-items:center;gap:6px;
-}
-.breadcrumb a:hover{color:#1D4ED8}
-.sep{color:#D1D5DB}
-.bc-current{color:#111827;font-weight:600}
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; padding: 0 48px 20px; }
+.page-title { font-size: 26px; font-weight: 800; }
+.page-sub { font-size: 13px; color: #6B7280; margin-top: 4px; }
 
-/* ══ PAGE HEADER ══ */
-.page-header{
-  display:flex;justify-content:space-between;align-items:flex-end;
-  padding:0 32px 24px;
-}
-.page-title{font-size:28px;color:#111827;line-height:1.1}
-.page-sub{font-size:13.5px;color:#6B7280;margin-top:6px}
-.sort-wrap{display:flex;align-items:center;gap:8px;font-size:13.5px}
-.sort-label{color:#6B7280}
-.sort-select{
-  position:relative;display:flex;align-items:center;gap:6px;
-  border:1px solid #E5E7EB;border-radius:8px;padding:7px 12px;
-  font-size:13.5px;font-weight:600;cursor:pointer;background:#fff;
-  min-width:140px;
-}
-.sort-dropdown{
-  position:absolute;top:calc(100%+4px);right:0;
-  background:#fff;border:1px solid #E5E7EB;border-radius:8px;
-  box-shadow:0 8px 24px rgba(0,0,0,.08);
-  width:160px;z-index:100;overflow:hidden;
-}
-.sort-opt{padding:10px 14px;font-size:13px;cursor:pointer}
-.sort-opt:hover{background:#F3F4F6}
-.sort-opt.active{color:#1D4ED8;font-weight:600}
+.sort-wrap { display: flex; align-items: center; gap: 8px; }
+.sort-label { font-size: 13px; color: #6B7280; }
+.sort-select { position: relative; display: flex; align-items: center; gap: 6px; border: 1px solid #E5E7EB; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; min-width: 150px; background: #fff; }
+.sort-dropdown { position: absolute; top: calc(100% + 4px); right: 0; background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.09); width: 170px; z-index: 200; overflow: hidden; }
+.sort-opt { padding: 10px 14px; font-size: 13px; cursor: pointer; transition: background .12s; }
+.sort-opt:hover { background: #F3F4F6; }
+.sort-opt.active { color: #1565C0; font-weight: 700; background: #EFF6FF; }
 
-/* ══ BODY LAYOUT ══ */
-.body-wrap{display:flex;gap:0;padding:0 32px;align-items:flex-start}
+.body-wrap { display: flex; padding: 0 48px 56px; gap: 22px; align-items: flex-start; }
 
-/* ══ SIDEBAR ══ */
-.sidebar{
-  width:210px;min-width:210px;
-  background:#fff;border:1px solid #E5E7EB;border-radius:14px;
-  padding:20px;margin-right:24px;
-  position:sticky;top:76px;
-}
-.filter-block{margin-bottom:0}
-.filter-title{
-  display:flex;align-items:center;gap:7px;
-  font-size:11.5px;letter-spacing:.6px;color:#111827;
-  margin-bottom:14px;
-}
-.check-row{
-  display:flex;align-items:center;gap:10px;
-  font-size:13.5px;color:#374151;cursor:pointer;
-  margin-bottom:10px;user-select:none;
-}
-.check-row:last-child{margin-bottom:0}
-.custom-check{
-  width:18px;height:18px;border-radius:5px;
-  border:1.5px solid #D1D5DB;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;transition:all .15s;
-}
-.custom-check.checked{background:#1D4ED8;border-color:#1D4ED8}
-.divider{height:1px;background:#F3F4F6;margin:16px 0}
+/* SIDEBAR */
+.sidebar { width: 220px; min-width: 220px; border: 1px solid #E5E7EB; border-radius: 14px; padding: 18px; position: sticky; top: 72px; max-height: calc(100vh - 90px); overflow-y: auto; }
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
 
-.size-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
-.size-btn{
-  padding:7px 4px;font-size:12px;font-weight:600;color:#374151;
-  border:1.5px solid #E5E7EB;border-radius:7px;
-  background:#fff;transition:all .15s;
-}
-.size-btn:hover{border-color:#1D4ED8;color:#1D4ED8}
-.size-btn.selected{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
+.filter-block { margin-bottom: 0; }
+.filter-title { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: #374151; margin-bottom: 12px; }
 
-.color-row{display:flex;gap:9px;flex-wrap:wrap}
-.color-dot{
-  width:28px;height:28px;border-radius:50%;border:2px solid transparent;
-  transition:transform .15s,box-shadow .15s;cursor:pointer;
-}
-.color-dot:hover{transform:scale(1.12)}
-.color-dot.selected{box-shadow:0 0 0 2px #fff,0 0 0 4px #1D4ED8}
+/* Category tree */
+.cat-tree-item { margin-bottom: 1px; }
+.cat-row { display: flex; align-items: center; justify-content: space-between; border-radius: 8px; padding: 5px 6px; transition: background .13s; cursor: pointer; }
+.cat-row:hover { background: #F3F4F6; }
+.cat-row.cat-active { background: #EFF6FF; }
+.cat-row-left { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
+.cat-dot { width: 7px; height: 7px; border-radius: 50%; border: 2px solid #D1D5DB; flex-shrink: 0; transition: all .15s; }
+.cat-dot.active { background: #1565C0; border-color: #1565C0; }
+.cat-thumb { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid #E5E7EB; }
+.cat-row-name { font-size: 13px; font-weight: 600; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-row.cat-active .cat-row-name { color: #1565C0; }
+.cat-toggle { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 5px; color: #9CA3AF; flex-shrink: 0; transition: background .13s; }
+.cat-toggle:hover { background: #E5E7EB; color: #374151; }
 
-.price-range{margin-top:4px}
-.range-slider{
-  width:100%;accent-color:#1D4ED8;cursor:pointer;
-  height:4px;
-}
-.price-labels{display:flex;justify-content:space-between;font-size:12px;color:#6B7280;margin-top:8px}
-.price-max{color:#1D4ED8;font-weight:700}
+.sub-list { margin: 2px 0 4px 20px; border-left: 2px solid #E5E7EB; padding-left: 10px; }
+.sub-row { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border-radius: 6px; cursor: pointer; transition: background .13s; }
+.sub-row:hover { background: #F3F4F6; }
+.sub-row.sub-active { background: #EFF6FF; }
+.sub-dash { font-size: 10px; color: #D1D5DB; flex-shrink: 0; }
+.sub-name { font-size: 12.5px; color: #6B7280; flex: 1; }
+.sub-row.sub-active .sub-name { color: #1565C0; font-weight: 600; }
+.sub-check { font-size: 10px; color: #1565C0; font-weight: 700; }
 
-.btn-apply{
-  display:block;width:100%;margin-top:20px;
-  background:#1D4ED8;color:#fff;
-  font-size:13px;font-weight:700;letter-spacing:.5px;
-  padding:12px;border-radius:10px;
-  transition:background .2s;
-}
-.btn-apply:hover{background:#1E40AF}
+/* Brands */
+.check-row { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #374151; cursor: pointer; padding: 4px 2px; border-radius: 6px; user-select: none; transition: background .12s; margin-bottom: 2px; }
+.check-row:hover { background: #F9FAFB; }
+.custom-check { width: 17px; height: 17px; min-width: 17px; border-radius: 5px; border: 1.5px solid #D1D5DB; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.custom-check.checked { background: #1565C0; border-color: #1565C0; }
 
-/* ══ MAIN ══ */
-.main-area{flex:1;min-width:0}
+/* Price */
+.price-inputs { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.price-input-wrap { flex: 1; position: relative; }
+.price-currency { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #9CA3AF; pointer-events: none; }
+.price-input { width: 100%; padding: 6px 4px 6px 17px; font-size: 11.5px; border: 1px solid #E5E7EB; border-radius: 7px; color: #111827; outline: none; -moz-appearance: textfield; }
+.price-input::-webkit-inner-spin-button, .price-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.price-input:focus { border-color: #1565C0; }
+.price-dash { font-size: 12px; color: #D1D5DB; flex-shrink: 0; }
 
-.active-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:20px}
-.filter-tag{
-  display:flex;align-items:center;gap:6px;
-  background:#EFF6FF;color:#1D4ED8;
-  border:1px solid #BFDBFE;border-radius:20px;
-  font-size:13px;font-weight:600;padding:5px 12px;
-}
-.filter-tag button{display:flex;align-items:center;color:#1D4ED8;padding:0}
-.filter-tag button:hover{color:#1E3A8A}
-.clear-all{font-size:12.5px;font-weight:700;color:#EF4444;letter-spacing:.4px}
-.clear-all:hover{text-decoration:underline}
+.range-wrap { position: relative; height: 22px; margin: 6px 0; }
+.range-track { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); height: 4px; background: #E5E7EB; border-radius: 4px; pointer-events: none; }
+.range-fill { position: absolute; top: 0; height: 100%; background: #1565C0; border-radius: 4px; }
+.range-slider { position: absolute; width: 100%; top: 0; left: 0; -webkit-appearance: none; appearance: none; background: transparent; pointer-events: none; height: 22px; margin: 0; }
+.range-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #1565C0; border: 2.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.2); pointer-events: all; cursor: pointer; }
+.range-slider::-moz-range-thumb { width: 15px; height: 15px; border-radius: 50%; background: #1565C0; border: 2.5px solid #fff; pointer-events: all; cursor: pointer; }
 
-/* ══ PRODUCT GRID ══ */
-.products-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.price-labels { display: flex; justify-content: space-between; font-size: 11.5px; color: #6B7280; margin-bottom: 10px; }
+.price-val.blue { color: #1565C0; font-weight: 700; }
 
-.product-card{
-  border:1px solid #E5E7EB;border-radius:14px;overflow:hidden;
-  background:#fff;cursor:pointer;
-  transition:transform .25s,box-shadow .25s;
-}
-.product-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(0,0,0,.09)}
+.price-quick { display: flex; flex-wrap: wrap; gap: 5px; }
+.price-q-btn { font-size: 11px; font-weight: 600; padding: 4px 9px; border: 1px solid #E5E7EB; border-radius: 20px; color: #6B7280; transition: all .15s; background: #fff; cursor: pointer; }
+.price-q-btn:hover { border-color: #1565C0; color: #1565C0; }
+.price-q-btn.active { background: #1565C0; border-color: #1565C0; color: #fff; }
 
-.card-img-wrap{
-  position:relative;aspect-ratio:1/1;
-  background:#F3F4F6;overflow:hidden;
-}
-.card-img-wrap img{transition:transform .35s}
-.product-card:hover .card-img-wrap img{transform:scale(1.05)}
+.divider { height: 1px; background: #F3F4F6; margin: 14px 0; }
+.btn-apply { display: block; width: 100%; margin-top: 16px; background: #1565C0; color: #fff; font-size: 13px; font-weight: 700; padding: 11px; border-radius: 10px; transition: background .2s; cursor: pointer; }
+.btn-apply:hover { background: #1251a3; }
+.btn-reset { display: block; width: 100%; margin-top: 7px; color: #EF4444; font-size: 12px; font-weight: 600; padding: 8px; border-radius: 10px; border: 1px solid #FECACA; transition: background .2s; text-align: center; cursor: pointer; }
+.btn-reset:hover { background: #FEF2F2; }
+.btn-reset.inline { width: auto; padding: 8px 20px; }
 
-.card-badge{
-  position:absolute;top:10px;left:10px;
-  color:#fff;font-size:11px;font-weight:700;
-  padding:3px 10px;border-radius:20px;letter-spacing:.3px;
-}
-.like-btn{
-  position:absolute;top:10px;right:10px;
-  width:32px;height:32px;border-radius:50%;
-  background:rgba(255,255,255,.92);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 1px 4px rgba(0,0,0,.12);
-  transition:background .2s;
-}
-.like-btn:hover{background:#fff}
-.like-btn.liked svg{stroke:#EF4444}
+/* Main */
+.main-area { flex: 1; min-width: 0; }
+.active-filters { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 16px; }
+.filter-tag { display: flex; align-items: center; gap: 5px; background: #EFF6FF; color: #1565C0; border: 1px solid #BFDBFE; border-radius: 20px; font-size: 12.5px; font-weight: 600; padding: 4px 11px; }
+.filter-tag button { display: flex; align-items: center; color: #93C5FD; transition: color .15s; }
+.filter-tag button:hover { color: #1565C0; }
+.clear-all { font-size: 12px; font-weight: 700; color: #EF4444; cursor: pointer; }
+.clear-all:hover { text-decoration: underline; }
 
-.card-body{padding:14px}
-.card-cat{font-size:10.5px;font-weight:700;letter-spacing:1px;color:#6B7280;text-transform:uppercase;margin-bottom:4px}
-.card-name{font-size:15px;font-weight:700;color:#111827;margin-bottom:4px}
-.card-desc{font-size:12.5px;color:#9CA3AF;line-height:1.5;margin-bottom:12px}
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 80px 0; color: #9CA3AF; font-size: 14px; text-align: center; }
 
-.card-foot{display:flex;justify-content:space-between;align-items:center}
-.price-block{display:flex;flex-direction:column;gap:2px}
-.card-price{font-size:16px;font-weight:800;color:#111827}
-.old-price{font-size:12px;color:#9CA3AF;text-decoration:line-through}
+/* Products */
+.products-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.product-card { border: 1px solid #E5E7EB; border-radius: 14px; overflow: hidden; background: #fff; transition: transform .28s cubic-bezier(.22,.68,0,1.2), box-shadow .28s; cursor: pointer; display: block; }
+.product-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(0,0,0,.1); }
+.prod-img-wrap { position: relative; aspect-ratio: 1/1; background: #F3F4F6; overflow: hidden; }
+.prod-img-wrap img { transition: transform .45s cubic-bezier(.22,.68,0,1.2); }
+.product-card:hover .prod-img-wrap img { transform: scale(1.07); }
+.card-badge { position: absolute; top: 10px; left: 10px; background: #EF4444; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+.like-btn { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,.28); display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(.8); transition: opacity .2s, transform .22s; }
+.product-card:hover .like-btn { opacity: 1; transform: scale(1); }
+.like-btn.active { opacity: 1; transform: scale(1); background: rgba(239,68,68,.2); }
+.prod-body { padding: 12px 14px 14px; }
+.prod-cat { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9CA3AF; margin-bottom: 4px; }
+.prod-name { font-size: 13.5px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px; }
+.prod-foot { display: flex; justify-content: space-between; align-items: center; }
+.prod-price { font-size: 14px; font-weight: 800; color: #1565C0; }
+.prod-price.sale { color: #EF4444; }
+.old-price { font-size: 11px; color: #9CA3AF; text-decoration: line-through; margin-top: 1px; }
+.cart-btn { width: 30px; height: 30px; border-radius: 7px; background: #F3F4F6; display: flex; align-items: center; justify-content: center; color: #374151; transition: background .2s, color .2s; flex-shrink: 0; }
+.product-card:hover .cart-btn { background: #1565C0; color: #fff; }
 
-.add-cart-btn{
-  width:36px;height:36px;border-radius:50%;
-  background:#111827;color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .2s;
-  flex-shrink:0;
-}
-.add-cart-btn:hover{background:#1D4ED8}
+/* Skeleton */
+.skeleton { pointer-events: none; }
+.skel-img { background: #E5E7EB; aspect-ratio: 1/1; }
+.skel-line { height: 11px; background: linear-gradient(90deg,#E5E7EB 25%,#D1D5DB 50%,#E5E7EB 75%); background-size: 200% 100%; border-radius: 6px; margin-bottom: 9px; animation: shimmer 1.4s infinite; }
+.skel-line.short { width: 45%; }
+.skel-line.mid { width: 65%; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-/* ══ PAGINATION ══ */
-.pagination{display:flex;align-items:center;gap:6px;justify-content:center;padding:40px 0 48px}
-.pg-btn{
-  width:38px;height:38px;border-radius:50%;border:1px solid #E5E7EB;
-  font-size:14px;font-weight:600;color:#374151;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;cursor:pointer;background:#fff;
-}
-.pg-btn:hover:not(.dots){border-color:#1D4ED8;color:#1D4ED8}
-.pg-btn.active{background:#1D4ED8;border-color:#1D4ED8;color:#fff}
-.pg-btn.dots{border:none;cursor:default;font-size:16px}
-
-/* ══ FOOTER TOP ══ */
-.footer-top{
-  background:#F9FAFB;border-top:1px solid #E5E7EB;
-  padding:52px 32px;
-  display:grid;grid-template-columns:1fr 1fr 1fr 1.5fr;gap:40px;
-}
-.ft-col{display:flex;flex-direction:column;gap:10px}
-.ft-col h4{font-size:12px;font-weight:800;letter-spacing:.7px;color:#111827;margin-bottom:4px}
-.ft-col a{font-size:13px;color:#6B7280}
-.ft-col a:hover{color:#1D4ED8}
-.newsletter-col p{font-size:13px;color:#6B7280;line-height:1.6;margin-bottom:4px}
-.newsletter-row{display:flex;gap:0;border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;margin-top:2px}
-.newsletter-row input{flex:1;border:none;padding:9px 12px;font-size:13px;outline:none;background:#fff}
-.btn-subscribe{
-  background:#1D4ED8;color:#fff;
-  font-size:11.5px;font-weight:700;letter-spacing:.4px;
-  padding:9px 14px;white-space:nowrap;transition:background .2s;
-}
-.btn-subscribe:hover{background:#1E40AF}
-
-/* ══ FOOTER BOTTOM ══ */
-.footer-bottom{
-  background:#fff;border-top:1px solid #E5E7EB;
-  padding:16px 32px;
-  display:flex;justify-content:space-between;align-items:center;
-}
-.footer-brand-sm{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:#1D4ED8}
-.copyright{font-size:12px;color:#9CA3AF}
-.footer-icons{display:flex;gap:10px}
-.fi-btn{
-  width:30px;height:30px;border-radius:7px;
-  border:1px solid #E5E7EB;
-  display:flex;align-items:center;justify-content:center;
-  color:#6B7280;transition:all .15s;
-}
-.fi-btn:hover{border-color:#1D4ED8;color:#1D4ED8}
+/* Pagination */
+.pagination { display: flex; align-items: center; gap: 6px; justify-content: center; padding: 36px 0 8px; }
+.pg-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #E5E7EB; font-size: 13px; font-weight: 600; color: #374151; display: flex; align-items: center; justify-content: center; transition: all .15s; background: #fff; cursor: pointer; }
+.pg-btn:hover:not(.dots):not(:disabled) { border-color: #1565C0; color: #1565C0; }
+.pg-btn.active { background: #1565C0; border-color: #1565C0; color: #fff; }
+.pg-btn.dots { border: none; cursor: default; }
+.pg-btn:disabled { opacity: .35; cursor: not-allowed; }
 </style>

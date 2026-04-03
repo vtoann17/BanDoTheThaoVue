@@ -10,19 +10,33 @@ import ResetPassword from '@/views/auth/ResetPassword.vue'
 import IndexView from '../views/index.vue'
 import ProductView from '@/views/ProductView.vue'
 import ProductdetailView from '@/views/ProductdetailView.vue'
-import Checkout from '@/components/Checkout.vue'
-import ProductAdmin from '@/views/admin/ProductAdmin.vue'
+import Cart from "@/views/Cart.vue"
+import Checkout from '@/views/Checkout.vue'
+import ProductAdmin from '@/views/admin/products/ProductAdmin.vue'
+import ProductAdd from '@/views/admin/products/ProductAdd.vue'
+import ProductEdit from '@/views/admin/products/ProductEdit.vue'
+import AttributeAdmin from '@/views/admin/attributes/AttributeAdmin.vue'
+import AttributeAdd from '@/views/admin/attributes/AttributeAdd.vue'
+import AttributeEdit from '@/views/admin/attributes/AttributeEdit.vue'
+import AttributeValue from '@/views/admin/attributevalues/AttributeValue.vue'
+import AttributeValueAdd from '@/views/admin/attributevalues/AttributeValueAdd.vue'
+import AttributeValueEdit from '@/views/admin/attributevalues/AttributeValueEdit.vue'
+import VariantAdmin from '@/views/admin/variants/VariantAdmin.vue'
+import VariantAdd from '@/views/admin/variants/VariantAdd.vue'
+import VariantEdit from '@/views/admin/variants/VariantEdit.vue'
 import Dashboar from '@/views/admin/Dashboar.vue'
-import ProductAdd from '@/views/admin/ProductAdd.vue'
 import CategoryAdmin from '@/views/admin/categories/CategoryAdmin.vue'
 import CategoryAdd from '@/views/admin/categories/CategoryAdd.vue'
+import CategoryEdit from "@/views/admin/categories/CategoryEdit.vue"
+import SubcategoryAdd from "@/views/admin/subcategory/SubcategoryAdd.vue"
+import SubcategoryAdmin from "@/views/admin/subcategory/SubcategoryAdmin.vue"
+import SubcategoryEdit from "@/views/admin/subcategory/SubcategoryEdit.vue"
 import Profile from '@/views/user/Profile.vue'
 import ChangePassword from '@/views/user/ChangePassword.vue'
 import Order from '@/views/user/Order.vue'
 import Address from '@/views/user/Address.vue'
 import Favorite from '@/views/user/Favorite.vue'
 import Coupon from '@/views/user/Coupon.vue'
-import Dashboard from '@/views/admin/Dashboard.vue'
 import OrderAdmin from '@/views/admin/OrderAdmin.vue'
 import UserAdmin from '@/views/admin/user/UserAdmin.vue'
 import UserAdd from '@/views/admin/user/UserAdd.vue'
@@ -60,9 +74,14 @@ const router = createRouter({
       component: ProductView, // component bạn tạo
     },
     {
-      path: "/productdetail", // đường dẫn URL
+      path: "/productdetail/:slug", // đường dẫn URL
       name: "productdetail",
       component: ProductdetailView, // component bạn tạo
+    },
+    {
+      path: "/cart", // đường dẫn URL
+      name: "cart",
+      component: Cart, // component bạn tạo
     },
     {
       path: "/checkout", // đường dẫn URL
@@ -76,17 +95,78 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/dashboar",
-      name: "dashboar",
-      component: Dashboar,
-      meta: { requiresAuth: true, requiresAdmin: true }
-    },
-    {
       path: "/productadd",
       name: "productadd",
       component: ProductAdd,
       meta: { requiresAuth: true, requiresAdmin: true }
     },
+    {
+      path: "/productedit/:id",
+      name: "productedit",
+      component: ProductEdit,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/attributeadmin",
+      name: "attributeadmin",
+      component: AttributeAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/attributeadd",
+      name: "attributeadd",
+      component: AttributeAdd,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/attributeedit/:id",
+      name: "attributeedit",
+      component: AttributeEdit,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/attributevalue",
+      name: "attributevalue",
+      component: AttributeValue,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/attributevalueadd",
+      name: "attributevalueadd",
+      component: AttributeValueAdd,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/attributevalueedit/:id",
+      name: "attributevalueedit",
+      component: AttributeValueEdit,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/variantadmin/:id",
+      name: "variantadmin",
+      component: VariantAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/variantadd/:id",
+      name: "variantadd",
+      component: VariantAdd,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/variantedit/:id",
+      name: "variantedit",
+      component: VariantEdit,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/dashboar",
+      name: "dashboar",
+      component: Dashboar,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    
     {
       path: "/categoryadmin",
       name: "categoryadmin",
@@ -97,6 +177,30 @@ const router = createRouter({
       path: "/categoryadd",
       name: "categoryadd",
       component: CategoryAdd,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/categoryedit/:id",
+      name: "categoryedit",
+      component: CategoryEdit,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/subcategoryadmin",
+      name: "subcategoryadmin",
+      component: SubcategoryAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/subcategoryadd",
+      name: "subcategoryadd",
+      component: SubcategoryAdd,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/subcategoryedit/:id",
+      name: "subcategoryedit",
+      component: SubcategoryEdit,
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
@@ -145,26 +249,21 @@ const router = createRouter({
       component: BrandEdit,
       meta: { requiresAuth: true, requiresAdmin: true } // Nên thêm bảo mật nếu là trang admin
     },
-    {
-      path: "/dashboard", // đường dẫn URL
-      name: "dashboard",
-      component: Dashboard, // component bạn tạo
-    },
-    {
-      path: "/orderAdmin", // đường dẫn URL
-      name: "orderAdmin",
+     {
+      path: "/orderadmin", // đường dẫn URL
+      name: "orderadmin",
       component: OrderAdmin, // component bạn tạo
       meta: { requiresAuth: true, requiresAdmin: true }
     },
-    {
-      path: "/userAdd", // đường dẫn URL
-      name: "userAdd",
+     {
+      path: "/useradd", // đường dẫn URL
+      name: "useradd",
       component: UserAdd, // component bạn tạo
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/userAdmin", // đường dẫn URL
-      name: "userAdmin",
+      path: "/useradmin", // đường dẫn URL
+      name: "useradmin",
       component: UserAdmin, // component bạn tạo
       meta: { requiresAuth: true, requiresAdmin: true }
     },
@@ -175,11 +274,26 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/brandAdmin", // đường dẫn URL
-      name: "brandAdmin",
+      path: "/brandadmin", // đường dẫn URL
+      name: "brandadmin",
       component: BrandAdmin, // component bạn tạo
     },
+     {
+      path: "/brandadd", // đường dẫn URL
+      name: "brandadd",
+      component: BrandAdd, // component bạn tạo
+    },
+     {
+      path: "/brandedit/:id", // đường dẫn URL
+      name: "brandedit",
+      component: BrandEdit, // component bạn tạo
+    },
     {
+      path: "/brandadmin", // đường dẫn URL
+      name: "brandadmin",
+      component: BrandAdmin, // component bạn tạo
+    },
+     {
       path: "/brandAdd", // đường dẫn URL
       name: "brandAdd",
       component: BrandAdd, // component bạn tạo
