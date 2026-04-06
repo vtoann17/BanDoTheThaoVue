@@ -128,7 +128,7 @@ const closeOnOutside = (e) => {
                 <i class="bi bi-person"></i>
                 Thông tin cá nhân
               </a>
-              <a href="/orders" class="dropdown-item">
+              <a href="/order" class="dropdown-item">
                 <i class="bi bi-receipt"></i>
                 Đơn hàng của tôi
               </a>
