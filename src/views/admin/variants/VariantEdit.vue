@@ -146,6 +146,7 @@ function validate() {
 
 async function submitForm() {
   if (!validate()) return;
+
   const payload = {
     product_id: form.product_id,
     sku: form.sku.trim(),
@@ -156,28 +157,23 @@ async function submitForm() {
     end: form.end || null,
     attribute_values: form.attribute_values,
   };
+  const fd = new FormData();
+  Object.entries(payload).forEach(([key, val]) => {
+    if (Array.isArray(val)) {
+      val.forEach((v) => fd.append(`${key}[]`, v));
+    } else if (val !== null && val !== undefined) {
+      fd.append(key, val);
+    }
+  });
+
+  fd.append("_method", "PUT"); 
 
   if (imageFile.value) {
-    const fd = new FormData();
-    Object.entries(payload).forEach(([key, val]) => {
-      if (Array.isArray(val)) {
-        val.forEach((v) => fd.append(`${key}[]`, v));
-      } else if (val !== null && val !== undefined) {
-        fd.append(key, val);
-      }
-    });
     fd.append("img", imageFile.value);
-    fd.append("_method", "PUT");
-
-    loading.value = true;
-    const result = await variantStore.updateVariant(variantId, fd);
-    loading.value = false;
-    if (result) goBack();
-    return;
   }
 
   loading.value = true;
-  const result = await variantStore.updateVariant(variantId, payload);
+  const result = await variantStore.updateVariant(variantId, fd);
   loading.value = false;
   if (result) goBack();
 }

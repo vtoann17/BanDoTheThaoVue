@@ -89,7 +89,7 @@
         Thương hiệu
       </router-link>
 
-      <router-link to="/" class="nav-item">
+      <router-link to="/orderadmin" class="nav-item">
         <i class="bi bi-cart"></i> Đơn hàng
       </router-link>
 

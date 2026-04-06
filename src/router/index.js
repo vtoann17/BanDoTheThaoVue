@@ -34,6 +34,7 @@ import SubcategoryEdit from "@/views/admin/subcategory/SubcategoryEdit.vue"
 import Profile from '@/views/user/Profile.vue'
 import ChangePassword from '@/views/user/ChangePassword.vue'
 import Order from '@/views/user/Order.vue'
+import OrderSuccess from "@/views/OrderSuccess.vue"
 import Address from '@/views/user/Address.vue'
 import Favorite from '@/views/user/Favorite.vue'
 import Coupon from '@/views/user/Coupon.vue'
@@ -219,6 +220,12 @@ const router = createRouter({
       path: "/order",
       name: "order",
       component: Order,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: "/ordersuccess",
+      name: "ordersuccess",
+      component: OrderSuccess,
       meta: { requiresAuth: true }
     },
     {
