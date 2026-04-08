@@ -11,7 +11,7 @@ const sports = [
   { name: 'Chạy bộ', desc: 'Bền bỉ trên mọi cung đường.',    img: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=800&q=80' },
   { name: 'Bóng đá', desc: 'Làm chủ cuộc chơi.',              img: 'https://images.unsplash.com/photo-1551958219-acbc595e3c0e?w=800&q=80' },
   { name: 'Bóng rổ', desc: 'Bứt phá mọi giới hạn cao độ.',   img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80' },
-]
+];
 
 const footerStore   = ['Đồ Nam', 'Đồ Nữ', 'Trẻ em', 'Phụ kiện']
 const footerSupport = ['Trạng thái đơn hàng', 'Trả hàng', 'Vận chuyển', 'Liên hệ']
