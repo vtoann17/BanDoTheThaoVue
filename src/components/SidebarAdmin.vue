@@ -83,11 +83,6 @@
       <router-link to="/brandadmin" class="nav-item">
         <i class="bi bi-bookmark-star"></i> Thương hiệu
       </router-link>
-      
-      <router-link to="/brandadmin" class="nav-item">
-        <i class="bi bi-tags"></i>
-        Thương hiệu
-      </router-link>
 
       <router-link to="/" class="nav-item">
         <i class="bi bi-cart"></i> Đơn hàng
@@ -101,6 +96,11 @@
       <router-link to="/couponadmin" class="nav-item">
         <i class="bi bi-ticket-perforated"></i>
         Mã giảm giá
+      </router-link>
+
+      <router-link to="/reviewadmin" class="nav-item">
+        <i class="bi bi-star-fill"></i>
+        Đánh giá
       </router-link>
     </nav>
 

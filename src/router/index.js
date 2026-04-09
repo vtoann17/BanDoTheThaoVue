@@ -50,6 +50,7 @@ import { useNotify } from "@/composables/useNotify";
 import CouponAdmin from '@/views/admin/coupon/CouponAdmin.vue'
 import CouponAdd from '@/views/admin/coupon/CouponAdd.vue'
 import CouponEdit from '@/views/admin/coupon/CouponEdit.vue'
+import ReviewAdmin from '@/views/admin/reviews/ReviewAdmin.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -312,6 +313,11 @@ const router = createRouter({
       path: "/couponedit/:id", // đường dẫn URL
       name: "couponedit",
       component: CouponEdit, // component bạn tạo
+    },
+    {
+      path: "/reviewadmin", // đường dẫn URL
+      name: "reviewadmin",
+      component: ReviewAdmin, // component bạn tạo
     },
     {
       path: "/auth/login", // đường dẫn URL
