@@ -101,9 +101,16 @@ export const useSubcategories = defineStore("subcategories", () => {
             });
 
             if (res.status === 200) {
-                subcategories.value = subcategories.value.filter(
-                    (s) => s.id !== id
-                );
+
+                if (subcategories.value.length === 1 && currentPage.value > 1) {
+                    currentPage.value--;
+                }
+
+                await loadSubcategories({
+                    page: currentPage.value,
+                    per_page: perPage.value
+                });
+
                 notify.toastSuccess("Xóa danh mục con thành công");
                 return true;
             }

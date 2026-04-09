@@ -84,10 +84,6 @@
         <i class="bi bi-bookmark-star"></i> Thương hiệu
       </router-link>
       
-      <router-link to="/brandadmin" class="nav-item">
-        <i class="bi bi-tags"></i>
-        Thương hiệu
-      </router-link>
 
       <router-link to="/orderadmin" class="nav-item">
         <i class="bi bi-cart"></i> Đơn hàng

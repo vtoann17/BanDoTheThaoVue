@@ -5,8 +5,12 @@ import { useProducts } from "@/stores/products";
 const store = useProducts();
 const baseUrl = import.meta.env.VITE_API_BASE.replace("/api", "");
 const liked = ref(new Set());
-onMounted(() => {
-  store.loadProducts({ per_page: 4 });
+const loading = ref(true); // ✅ thêm loading state
+
+onMounted(async () => {
+  loading.value = true;
+  await store.loadProducts({ per_page: 4 });
+  loading.value = false;
 });
 
 const toggleLike = (id) => {
@@ -27,8 +31,8 @@ const toggleLike = (id) => {
     </div>
 
     <div class="products-grid">
-      <!-- Skeleton -->
-      <template v-if="store.products.length === 0">
+      <!-- ✅ Dùng loading thay vì products.length === 0 -->
+      <template v-if="loading">
         <div v-for="i in 4" :key="i" class="product-card skeleton">
           <div class="prod-img-wrap skel-img"></div>
           <div class="prod-body">
@@ -39,46 +43,34 @@ const toggleLike = (id) => {
         </div>
       </template>
 
-      <div v-for="p in store.products" :key="p.id" class="product-card">
-        <router-link :to="`/productdetail/${p.slug}`" class="product-card">
-          <div class="prod-img-wrap">
-            <img
-              :src="`${baseUrl}/storage/${p.image}`"
-              :alt="p.name"
-              loading="lazy"
-            />
-
-            <!-- Nút like hiện khi hover -->
-            <button
-              class="like-btn"
-              :class="{ active: liked.has(p.id) }"
-              @click.stop="toggleLike(p.id)"
-            >
-              <svg viewBox="0 0 24 24" width="16" height="16">
-                <path
-                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5
-                   2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09
-                   C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5
-                   c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                  :fill="liked.has(p.id) ? '#ef4444' : 'none'"
-                  :stroke="liked.has(p.id) ? '#ef4444' : '#fff'"
-                  stroke-width="1.8"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div class="prod-body">
-            <!-- <p class="prod-cat">{{ p.subcategory?.name ?? "—" }}</p> -->
-            <p class="prod-name">{{ p.name }}</p>
-            <div class="prod-foot">
-              <span class="prod-price">
-                {{ Number(p.price).toLocaleString("vi-VN") }}₫
-              </span>
+      <template v-else>
+        <div v-for="p in store.products" :key="p.id" class="product-card">
+          <router-link :to="`/productdetail/${p.slug}`" class="product-card">
+            <div class="prod-img-wrap">
+              <img :src="`${baseUrl}/storage/${p.image}`" :alt="p.name" loading="lazy"/>
+              <button class="like-btn" :class="{ active: liked.has(p.id) }" @click.stop="toggleLike(p.id)">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path
+                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5
+                     2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09
+                     C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5
+                     c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                    :fill="liked.has(p.id) ? '#ef4444' : 'none'"
+                    :stroke="liked.has(p.id) ? '#ef4444' : '#fff'"
+                    stroke-width="1.8"
+                  />
+                </svg>
+              </button>
             </div>
-          </div>
-        </router-link>
-      </div>
+            <div class="prod-body">
+              <p class="prod-name">{{ p.name }}</p>
+              <div class="prod-foot">
+                <span class="prod-price">{{ Number(p.price).toLocaleString("vi-VN") }}₫</span>
+              </div>
+            </div>
+          </router-link>
+        </div>
+      </template>
     </div>
   </section>
 </template>
