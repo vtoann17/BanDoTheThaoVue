@@ -98,6 +98,11 @@
         <i class="bi bi-ticket-perforated"></i>
         Mã giảm giá
       </router-link>
+
+      <router-link to="/reviewadmin" class="nav-item">
+        <i class="bi bi-star-fill"></i>
+        Đánh giá
+      </router-link>
     </nav>
 
     <div class="sidebar-footer">
