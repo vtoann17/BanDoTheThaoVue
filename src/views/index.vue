@@ -3,7 +3,7 @@ import AppHeader from "../components/AppHeader.vue"
 import AppFooter from '../components/AppFooter.vue';
 import ProductList from "../components/ProductList.vue";
 import CategoryList from '../components/CategoryList.vue'
-import { onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
 
@@ -11,18 +11,21 @@ const sports = [
   { name: 'Chạy bộ', desc: 'Bền bỉ trên mọi cung đường.',    img: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=800&q=80' },
   { name: 'Bóng đá', desc: 'Làm chủ cuộc chơi.',              img: 'https://images.unsplash.com/photo-1551958219-acbc595e3c0e?w=800&q=80' },
   { name: 'Bóng rổ', desc: 'Bứt phá mọi giới hạn cao độ.',   img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80' },
-]
+];
 
 const footerStore   = ['Đồ Nam', 'Đồ Nữ', 'Trẻ em', 'Phụ kiện']
 const footerSupport = ['Trạng thái đơn hàng', 'Trả hàng', 'Vận chuyển', 'Liên hệ']
 const footerPolicy  = ['Bảo mật', 'Điều khoản', 'Cookies']
+
 const route = useRoute();
 const notify = useNotify();
+const pageReady = ref(false);
 
 onMounted(() => {
   if (route.query.error === "forbidden") {
     notify.toastError("Bạn không có quyền!");
   }
+  pageReady.value = true;
 });
 </script>
 
@@ -72,6 +75,7 @@ onMounted(() => {
       </div>
     </div>
   </section>
+
   <AppFooter/>
 </template>
 

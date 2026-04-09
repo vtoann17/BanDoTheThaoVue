@@ -11,13 +11,17 @@ const showDropdown = ref(false);
 const dropdownRef = ref(null);
 
 onMounted(() => {
-  authStore.getUser();
-  if (authStore.user) cartStore.loadCart();
+  if (!authStore.user) {
+    authStore.getUser();
+  } else {
+    cartStore.loadCart();
+  }
   document.addEventListener("click", closeOnOutside);
 });
-watch(() => authStore.user, (user) => {
-  if (user) cartStore.loadCart();
-}, { immediate: true });
+
+watch(() => authStore.user, (user, oldUser) => {
+  if (user && !oldUser) cartStore.loadCart(); 
+});
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", closeOnOutside);
@@ -128,7 +132,7 @@ const closeOnOutside = (e) => {
                 <i class="bi bi-person"></i>
                 Thông tin cá nhân
               </a>
-              <a href="/orders" class="dropdown-item">
+              <a href="/order" class="dropdown-item">
                 <i class="bi bi-receipt"></i>
                 Đơn hàng của tôi
               </a>

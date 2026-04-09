@@ -34,6 +34,8 @@ import SubcategoryEdit from "@/views/admin/subcategory/SubcategoryEdit.vue"
 import Profile from '@/views/user/Profile.vue'
 import ChangePassword from '@/views/user/ChangePassword.vue'
 import Order from '@/views/user/Order.vue'
+import OrderSuccess from "@/views/OrderSuccess.vue"
+import OrderFailed from "@/views/OrderFailed.vue"
 import Address from '@/views/user/Address.vue'
 import Favorite from '@/views/user/Favorite.vue'
 import Coupon from '@/views/user/Coupon.vue'
@@ -223,6 +225,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: "/ordersuccess",
+      name: "ordersuccess",
+      component: OrderSuccess,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: "/orderfailed",
+      name: "orderfailed",
+      component: OrderFailed,
+      meta: { requiresAuth: true }
+    },
+    {
       path: "/address",
       name: "address",
       component: Address,
@@ -361,13 +375,22 @@ const router = createRouter({
 })
 
 
+let isInitialized = false;  
+
 router.beforeEach(async (to, from) => {
   const auth = JSON.parse(localStorage.getItem("auth") || "null");
   const authStore = useAuth();
   const notify = useNotify();
-
-  if (auth && !authStore.user) {
-    await authStore.getUser();
+  if (auth && !authStore.user && !isInitialized) {
+    isInitialized = true;
+    try {
+      await Promise.race([
+        authStore.getUser(),
+        new Promise((_, reject) => setTimeout(() => reject("timeout"), 3000)),
+      ]);
+    } catch {
+      localStorage.removeItem("auth");
+    }
   }
 
   if (to.meta.requiresAuth && !auth) {

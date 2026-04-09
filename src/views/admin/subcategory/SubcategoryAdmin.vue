@@ -11,7 +11,6 @@ const search = ref("");
 const sortValue = ref("id|desc");
 const sortKey = ref("id");
 const sortDir = ref("desc");
-const currentPage = ref(1);
 const perPage = 10;
 
 async function fetchData() {
@@ -20,18 +19,19 @@ async function fetchData() {
     sort_by: sortKey.value,
     sort_dir: sortDir.value,
     per_page: perPage,
-    page: currentPage.value,
+    page: subStore.currentPage, // dùng store
   });
 }
 
 onMounted(fetchData);
-watch(currentPage, fetchData);
+
+watch(() => subStore.currentPage, fetchData);
 
 function onSortChange() {
   const [key, dir] = sortValue.value.split("|");
   sortKey.value = key;
   sortDir.value = dir;
-  currentPage.value = 1;
+  subStore.currentPage = 1;
   fetchData();
 }
 
@@ -39,7 +39,7 @@ let searchTimer = null;
 function onSearchInput() {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
-    currentPage.value = 1;
+    subStore.currentPage = 1;
     fetchData();
   }, 400);
 }
@@ -51,8 +51,9 @@ function toggleSort(key) {
     sortKey.value = key;
     sortDir.value = "asc";
   }
+
   sortValue.value = `${sortKey.value}|${sortDir.value}`;
-  currentPage.value = 1;
+  subStore.currentPage = 1;
   fetchData();
 }
 
@@ -63,29 +64,38 @@ function sortIcon(key) {
 
 function goPage(p) {
   if (p < 1 || p > subStore.lastPage) return;
-  currentPage.value = p;
+  subStore.currentPage = p;
 }
 
 const pageNumbers = computed(() => {
   const pages = [];
-  for (let i = 1; i <= subStore.lastPage; i++) pages.push(i);
+  for (let i = 1; i <= subStore.lastPage; i++) {
+    pages.push(i);
+  }
   return pages;
 });
 
 const rangeStart = computed(() =>
-  subStore.total === 0 ? 0 : (currentPage.value - 1) * perPage + 1
+  subStore.total === 0
+    ? 0
+    : (subStore.currentPage - 1) * perPage + 1
 );
+
 const rangeEnd = computed(() =>
-  Math.min(currentPage.value * perPage, subStore.total)
+  Math.min(subStore.currentPage * perPage, subStore.total)
 );
 
 async function handleDelete(id) {
-  const ok = await subStore.deleteSubcategory(id);
-  if (ok) fetchData();
+  await subStore.deleteSubcategory(id);
 }
 
-function goToAdd() { router.push("/subcategoryadd"); }
-function goToEdit(id) { router.push(`/subcategoryedit/${id}`); }
+function goToAdd() {
+  router.push("/subcategoryadd");
+}
+
+function goToEdit(id) {
+  router.push(`/subcategoryedit/${id}`);
+}
 </script>
 
 <template>
@@ -206,17 +216,17 @@ function goToEdit(id) { router.push(`/subcategoryedit/${id}`); }
             Hiển thị {{ rangeStart }} - {{ rangeEnd }} trong tổng số {{ subStore.total }} danh mục con
           </span>
           <div class="pagination-controls">
-            <button class="page-btn nav-btn" :disabled="currentPage === 1" @click="goPage(currentPage - 1)">
+            <button class="page-btn nav-btn" :disabled="subStore.currentPage === 1" @click="goPage(subStore.currentPage - 1)">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <button
               v-for="p in pageNumbers" :key="p"
-              class="page-btn" :class="{ active: p === currentPage }"
+              class="page-btn" :class="{ active: p === subStore.currentPage }"
               @click="goPage(p)"
             >{{ p }}</button>
-            <button class="page-btn nav-btn" :disabled="currentPage === subStore.lastPage" @click="goPage(currentPage + 1)">
+            <button class="page-btn nav-btn" :disabled="subStore.currentPage === subStore.lastPage" @click="goPage(subStore.currentPage + 1)">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
