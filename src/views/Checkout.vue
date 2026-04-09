@@ -71,12 +71,14 @@ const handleCheckout = async () => {
   const order = await orderStore.createOrder(
     selectedAddressId.value,
     paymentMethod.value,
-    shippingStore.shippingFee 
+    shippingStore.shippingFee
   );
   if (!order) return;
 
   if (paymentMethod.value === "vnpay") {
     await paymentStore.payWithVnpay(order.id);
+  } else if (paymentMethod.value === "momo") {
+    await paymentStore.payWithMomo(order.id);
   } else {
     const ok = await paymentStore.payWithCod(order.id);
     if (ok) router.push(`/ordersuccess?order_id=${order.id}`);
@@ -189,6 +191,18 @@ const handleCheckout = async () => {
                 </div>
               </div>
             </label>
+
+            <!-- ✅ MoMo option -->
+            <label class="payment-option" :class="{ active: paymentMethod === 'momo' }">
+              <input type="radio" name="payment" value="momo" v-model="paymentMethod" />
+              <div class="payment-content">
+                <div class="momo-badge">M</div>
+                <div class="payment-info">
+                  <div class="payment-title">Thanh toán qua MoMo</div>
+                  <div class="payment-desc">Ví điện tử MoMo</div>
+                </div>
+              </div>
+            </label>
           </div>
         </div>
 
@@ -243,6 +257,7 @@ const handleCheckout = async () => {
             <!-- Nút đặt hàng -->
             <button
               class="btn-checkout"
+              :class="{ 'btn-momo': paymentMethod === 'momo' }"
               :disabled="loading || !items.length || !selectedAddressId"
               @click="handleCheckout"
             >
@@ -252,7 +267,11 @@ const handleCheckout = async () => {
               </svg>
               <span v-if="loading">Đang xử lý...</span>
               <span v-else>
-                {{ paymentMethod === 'vnpay' ? 'Thanh toán VNPay' : 'Đặt hàng (COD)' }}
+                {{
+                  paymentMethod === 'vnpay' ? 'Thanh toán VNPay' :
+                  paymentMethod === 'momo'  ? 'Thanh toán MoMo'  :
+                  'Đặt hàng (COD)'
+                }}
               </span>
               <svg v-if="!loading" class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -531,6 +550,22 @@ a {
   font-size: 10px;
   flex-shrink: 0;
 }
+
+/* ✅ MoMo badge */
+.momo-badge {
+  width: 28px;
+  height: 28px;
+  background-color: #ae2070;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
 .payment-title {
   font-size: 13px;
   font-weight: 700;
@@ -607,37 +642,6 @@ a {
   padding: 12px 0;
 }
 
-/* Discount */
-.discount-code {
-  margin-bottom: 16px;
-}
-.discount-code label {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 6px;
-}
-.discount-input-group {
-  display: flex;
-  gap: 6px;
-}
-.btn-apply {
-  background-color: #1e293b;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.2s;
-}
-.btn-apply:hover {
-  background-color: #111827;
-}
-
 /* Pricing */
 .price-breakdown {
   border-top: 1px solid #f3f4f6;
@@ -702,36 +706,13 @@ a {
   background-color: #1d4ed8;
 }
 
-/* Trust Badges */
-.trust-badges-wrapper {
-  margin-top: 20px;
+/* ✅ MoMo button style */
+.btn-checkout.btn-momo {
+  background-color: #ae2070;
+  box-shadow: 0 3px 10px rgba(174, 32, 112, 0.25);
 }
-.trust-badges {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-.badge-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  color: #9ca3af;
-}
-.badge-item span {
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.secure-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #9ca3af;
-  text-align: center;
+.btn-checkout.btn-momo:hover {
+  background-color: #96195f;
 }
 
 .back-link-wrapper {

@@ -25,7 +25,7 @@ export const usePayment = defineStore("payment", () => {
             );
             console.log("VNPAY URL:", res.data.payment_url);
             if (res.data.payment_url) {
-                // window.location.href = res.data.payment_url;
+                window.location.href = res.data.payment_url;
             }
         } catch (error) {
             const msg = error.response?.data?.message || "Không tạo được link thanh toán";
@@ -56,9 +56,31 @@ export const usePayment = defineStore("payment", () => {
         }
     };
 
+    const payWithMomo = async (orderId) => {
+        loading.value = true;
+        try {
+            const res = await axios.post(
+                `${apiBase}/momo/pay`,
+                { order_id: orderId },
+                { headers: authHeaders() }
+            );
+            if (res.data.payUrl) {
+                window.location.href = res.data.payUrl;
+            } else {
+                notify.toastError("Không lấy được link thanh toán MoMo");
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || "Thanh toán MoMo thất bại";
+            notify.toastError(msg);
+        } finally {
+            loading.value = false;
+        }
+    };
+
     return {
         loading,
         payWithVnpay,
         payWithCod,
+        payWithMomo,
     };
 });

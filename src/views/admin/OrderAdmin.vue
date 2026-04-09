@@ -493,7 +493,6 @@ const tabs = [
   { name: "Đã hủy", value: "cancelled" },
 ];
 
-// ── Fetch ──────────────────────────────────────────────
 const buildParams = () => ({
   order_status: activeTab.value || undefined,
   payment_status: paymentStatusFilter.value || undefined,
@@ -546,7 +545,6 @@ const visiblePages = computed(() => {
   return pages;
 });
 
-// ── Modals ─────────────────────────────────────────────
 const openDetail = (order) => {
   selectedOrder.value = order;
   showDetailModal.value = true;
@@ -568,7 +566,6 @@ const submitUpdate = async () => {
   fetchOrders(orderStore.pagination.current_page);
 };
 
-// ── Formatters ─────────────────────────────────────────
 const formatCurrency = (val) =>
   val != null ? Number(val).toLocaleString("vi-VN") + "đ" : "0đ";
 const formatDate = (dt) =>

@@ -11,13 +11,17 @@ const showDropdown = ref(false);
 const dropdownRef = ref(null);
 
 onMounted(() => {
-  authStore.getUser();
-  if (authStore.user) cartStore.loadCart();
+  if (!authStore.user) {
+    authStore.getUser();
+  } else {
+    cartStore.loadCart();
+  }
   document.addEventListener("click", closeOnOutside);
 });
-watch(() => authStore.user, (user) => {
-  if (user) cartStore.loadCart();
-}, { immediate: true });
+
+watch(() => authStore.user, (user, oldUser) => {
+  if (user && !oldUser) cartStore.loadCart(); 
+});
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", closeOnOutside);

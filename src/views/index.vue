@@ -3,7 +3,7 @@ import AppHeader from "../components/AppHeader.vue"
 import AppFooter from '../components/AppFooter.vue';
 import ProductList from "../components/ProductList.vue";
 import CategoryList from '../components/CategoryList.vue'
-import { onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
 
@@ -16,13 +16,16 @@ const sports = [
 const footerStore   = ['Đồ Nam', 'Đồ Nữ', 'Trẻ em', 'Phụ kiện']
 const footerSupport = ['Trạng thái đơn hàng', 'Trả hàng', 'Vận chuyển', 'Liên hệ']
 const footerPolicy  = ['Bảo mật', 'Điều khoản', 'Cookies']
+
 const route = useRoute();
 const notify = useNotify();
+const pageReady = ref(false);
 
 onMounted(() => {
   if (route.query.error === "forbidden") {
     notify.toastError("Bạn không có quyền!");
   }
+  pageReady.value = true;
 });
 </script>
 
@@ -72,6 +75,7 @@ onMounted(() => {
       </div>
     </div>
   </section>
+
   <AppFooter/>
 </template>
 
