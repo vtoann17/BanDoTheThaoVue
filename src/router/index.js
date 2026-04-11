@@ -52,6 +52,7 @@ import { useNotify } from "@/composables/useNotify";
 import CouponAdmin from '@/views/admin/coupon/CouponAdmin.vue'
 import CouponAdd from '@/views/admin/coupon/CouponAdd.vue'
 import CouponEdit from '@/views/admin/coupon/CouponEdit.vue'
+import ReviewAdmin from '@/views/admin/reviews/ReviewAdmin.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -106,6 +107,12 @@ const router = createRouter({
       path: "/productedit/:id",
       name: "productedit",
       component: ProductEdit,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: "/reviewadmin",
+      name: "reviewadmin",
+      component: ReviewAdmin,
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {

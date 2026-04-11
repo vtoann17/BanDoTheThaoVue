@@ -34,7 +34,7 @@ const handleGoogleLogin = () => {
             </svg>
           </div>
           <h1 class="title">Đăng nhập</h1>
-          <p class="subtitle">Chào mừng bạn trở lại với Sports Store</p>
+          <p class="subtitle">Chào mừng bạn trở lại với THBA</p>
         </header>
 
         <!-- FORM -->

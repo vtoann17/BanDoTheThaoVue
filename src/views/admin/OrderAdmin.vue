@@ -465,8 +465,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useOrder } from "@/stores/orders";
-import HeaderAdmin from "../../components/HeaderAdmin.vue"
-import SidebarAdmin from "../../components/SidebarAdmin.vue"
+import HeaderAdmin from "../../components/HeaderAdmin.vue";
+import SidebarAdmin from "../../components/SidebarAdmin.vue";
 
 const orderStore = useOrder();
 
@@ -477,7 +477,7 @@ const searchQuery = ref("");
 const paymentStatusFilter = ref("");
 const sortBy = ref("id");
 const sortDir = ref("desc");
-const perPage = ref(10);
+const perPage = ref(5);
 
 const showDetailModal = ref(false);
 const showUpdateModal = ref(false);
@@ -493,20 +493,19 @@ const tabs = [
   { name: "Đã hủy", value: "cancelled" },
 ];
 
-const buildParams = () => ({
+const buildParams = (page = 1) => ({
   order_status: activeTab.value || undefined,
   payment_status: paymentStatusFilter.value || undefined,
   search: searchQuery.value || undefined,
   sort_by: sortBy.value,
   sort_dir: sortDir.value,
   per_page: perPage.value,
-  page: orderStore.pagination.current_page,
+  page: page,
 });
 
 const fetchOrders = async (page = 1) => {
   loading.value = true;
-  orderStore.pagination.current_page = page;
-  await orderStore.loadOrders(buildParams());
+  await orderStore.loadOrders(buildParams(page));
   loading.value = false;
 };
 
@@ -523,7 +522,6 @@ const goToPage = (page) => {
   fetchOrders(page);
 };
 
-// ── Pagination helpers ─────────────────────────────────
 const fromItem = computed(() => {
   const p = orderStore.pagination;
   return (p.current_page - 1) * p.per_page + 1;
