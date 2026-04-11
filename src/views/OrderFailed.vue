@@ -5,14 +5,18 @@ import AppHeader from "../components/AppHeader.vue";
 import AppFooter from "../components/AppFooter.vue";
 
 const router = useRouter();
-const route = useRoute();
+const route  = useRoute();
 
-const errorCode = computed(() => route.query.error || 'unknown');
+const errorCode = computed(() => route.query.error || null);
+const orderId   = computed(() => route.query.order_id || null);
 
 const errorMessage = computed(() => {
+  if (orderId.value && !errorCode.value) {
+    return 'Thanh toán chưa hoàn tất. Đơn hàng của bạn vẫn được lưu lại.';
+  }
   const codes = {
     'invalid_signature': 'Chữ ký không hợp lệ. Giao dịch bị từ chối.',
-    'order_not_found': 'Không tìm thấy đơn hàng.',
+    'order_not_found':   'Không tìm thấy đơn hàng.',
     '24': 'Bạn đã hủy giao dịch.',
     '09': 'Thẻ/Tài khoản chưa đăng ký dịch vụ InternetBanking.',
     '10': 'Xác thực thông tin thẻ/tài khoản quá 3 lần.',
@@ -21,9 +25,8 @@ const errorMessage = computed(() => {
     '51': 'Tài khoản không đủ số dư.',
     '65': 'Tài khoản đã vượt quá hạn mức giao dịch trong ngày.',
     '75': 'Ngân hàng đang bảo trì.',
-    'unknown': 'Đã xảy ra lỗi không xác định. Vui lòng thử lại.',
   };
-  return codes[errorCode.value] ?? `Giao dịch thất bại (Mã lỗi: ${errorCode.value}).`;
+  return codes[errorCode.value] ?? `Giao dịch thất bại (Mã lỗi: ${errorCode.value ?? 'unknown'}).`;
 });
 </script>
 
@@ -46,9 +49,15 @@ const errorMessage = computed(() => {
         <p class="failed-sub">{{ errorMessage }}</p>
 
         <!-- Error code badge -->
-        <div class="error-badge">
+        <div class="error-badge" v-if="errorCode">
           <span class="error-label">Mã lỗi</span>
           <span class="error-value">{{ errorCode.toUpperCase() }}</span>
+        </div>
+
+        <!-- Order badge (khi hủy giữa chừng) -->
+        <div class="error-badge" v-else-if="orderId">
+          <span class="error-label">Mã đơn hàng</span>
+          <span class="error-value">#{{ orderId }}</span>
         </div>
 
         <!-- Hướng dẫn -->

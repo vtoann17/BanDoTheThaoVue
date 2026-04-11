@@ -56,6 +56,28 @@ export const useCart = defineStore("cart", () => {
             return false;
         }
     };
+    const reOrder = async (orderId) => {
+    try {
+        const res = await axios.post(
+            `${apiBase}/orders/${orderId}/reorder`,
+            {},
+            { headers: authHeaders() }
+        );
+        if (res.status === 200) {
+            await loadCart();
+            if (res.data.out_of_stock?.length) {
+                notify.toastError(`Một số sản phẩm hết hàng: ${res.data.out_of_stock.join(', ')}`);
+            } else {
+                notify.toastSuccess(res.data.message);
+            }
+            return true;
+        }
+    } catch (error) {
+        const msg = error.response?.data?.message || "Không thể mua lại";
+        notify.toastError(msg);
+        return false;
+    }
+};
 
     const updateQty = async (cartId, quantity) => {
         if (quantity < 1) return;
@@ -121,6 +143,7 @@ export const useCart = defineStore("cart", () => {
         totalItems,
         loadCart,
         addItem,
+        reOrder,
         updateQty,
         removeItem,
         clearCart,

@@ -68,6 +68,8 @@
               <option value="pending">Chờ thanh toán</option>
               <option value="paid">Đã thanh toán</option>
               <option value="failed">Thất bại</option>
+              <option value="refund_pending">Đang hoàn tiền</option>
+              <option value="refunded">Đã hoàn tiền</option>
             </select>
             <select
               v-model="sortBy"
@@ -101,13 +103,11 @@
 
         <!-- Table -->
         <div class="table-container">
-          <!-- Loading -->
           <div v-if="loading" class="loading-state">
             <div class="spinner"></div>
             <span>Đang tải dữ liệu...</span>
           </div>
 
-          <!-- Empty -->
           <div v-else-if="orderStore.orders.length === 0" class="empty-state">
             <svg
               fill="none"
@@ -126,7 +126,6 @@
             <p>Không có đơn hàng nào</p>
           </div>
 
-          <!-- Data Table -->
           <table v-else class="data-table">
             <thead>
               <tr>
@@ -166,6 +165,7 @@
                     }}</span>
                   </div>
                 </td>
+                <!-- total_amount đã gồm ship và trừ discount, hiển thị thẳng -->
                 <td class="font-bold">
                   {{ formatCurrency(order.total_amount) }}
                 </td>
@@ -240,7 +240,6 @@
             </tbody>
           </table>
 
-          <!-- Pagination -->
           <div
             class="pagination-footer"
             v-if="!loading && orderStore.orders.length > 0"
@@ -350,8 +349,13 @@
                 formatCurrency(selectedOrder.shipping_fee)
               }}</span>
             </div>
+            <div class="detail-item" v-if="selectedOrder.discount > 0">
+              <span class="detail-label">Giảm giá</span>
+              <span class="detail-value discount-text">-{{ formatCurrency(selectedOrder.discount) }}</span>
+            </div>
             <div class="detail-item">
-              <span class="detail-label">Tổng tiền hàng</span>
+              <!-- total_amount = subtotal + ship - discount (đã tính sẵn ở backend) -->
+              <span class="detail-label">Tổng thanh toán</span>
               <span class="detail-value font-bold text-blue">{{
                 formatCurrency(selectedOrder.total_amount)
               }}</span>
@@ -363,8 +367,9 @@
                   'status-pill',
                   orderStatusClass(selectedOrder.order_status),
                 ]"
-                >{{ orderStatusLabel(selectedOrder.order_status) }}</span
               >
+                {{ orderStatusLabel(selectedOrder.order_status) }}
+              </span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Trạng thái thanh toán</span>
@@ -373,8 +378,36 @@
                   'status-pill',
                   paymentStatusClass(selectedOrder.payment_status),
                 ]"
-                >{{ paymentStatusLabel(selectedOrder.payment_status) }}</span
               >
+                {{ paymentStatusLabel(selectedOrder.payment_status) }}
+              </span>
+            </div>
+
+            <!-- Lý do hủy -->
+            <div
+              class="detail-item detail-item-full"
+              v-if="selectedOrder.order_status === 'cancelled'"
+            >
+              <span class="detail-label">Lý do hủy</span>
+              <div class="cancel-reason-box">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <span>{{
+                  selectedOrder.cancel_reason || "Không có lý do"
+                }}</span>
+              </div>
             </div>
           </div>
 
@@ -402,14 +435,20 @@
                 </tr>
               </tbody>
             </table>
-            <div class="items-total">
-              <span>Tổng thanh toán (bao gồm ship):</span>
-              <span class="total-final">{{
-                formatCurrency(
-                  (selectedOrder.total_amount ?? 0) +
-                    (selectedOrder.shipping_fee ?? 0)
-                )
-              }}</span>
+            <div class="items-summary">
+              <div class="items-summary-row" v-if="selectedOrder.discount > 0">
+                <span>Giảm giá:</span>
+                <span class="discount-text">-{{ formatCurrency(selectedOrder.discount) }}</span>
+              </div>
+              <div class="items-summary-row">
+                <span>Phí vận chuyển:</span>
+                <span>{{ formatCurrency(selectedOrder.shipping_fee) }}</span>
+              </div>
+              <div class="items-total">
+                <span>Tổng thanh toán:</span>
+                <!-- total_amount đã gồm ship và đã trừ discount, không cộng thêm -->
+                <span class="total-final">{{ formatCurrency(selectedOrder.total_amount) }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -446,6 +485,8 @@
               <option value="pending">Chờ thanh toán</option>
               <option value="paid">Đã thanh toán</option>
               <option value="failed">Thất bại</option>
+              <option value="refund_pending">Đang hoàn tiền</option>
+              <option value="refunded">Đã hoàn tiền</option>
             </select>
           </div>
           <div class="modal-actions">
@@ -465,8 +506,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useOrder } from "@/stores/orders";
-import HeaderAdmin from "../../components/HeaderAdmin.vue"
-import SidebarAdmin from "../../components/SidebarAdmin.vue"
+import HeaderAdmin from "../../components/HeaderAdmin.vue";
+import SidebarAdmin from "../../components/SidebarAdmin.vue";
 
 const orderStore = useOrder();
 
@@ -477,7 +518,7 @@ const searchQuery = ref("");
 const paymentStatusFilter = ref("");
 const sortBy = ref("id");
 const sortDir = ref("desc");
-const perPage = ref(10);
+const perPage = ref(5);
 
 const showDetailModal = ref(false);
 const showUpdateModal = ref(false);
@@ -493,20 +534,19 @@ const tabs = [
   { name: "Đã hủy", value: "cancelled" },
 ];
 
-const buildParams = () => ({
+const buildParams = (page = 1) => ({
   order_status: activeTab.value || undefined,
   payment_status: paymentStatusFilter.value || undefined,
   search: searchQuery.value || undefined,
   sort_by: sortBy.value,
   sort_dir: sortDir.value,
   per_page: perPage.value,
-  page: orderStore.pagination.current_page,
+  page,
 });
 
 const fetchOrders = async (page = 1) => {
   loading.value = true;
-  orderStore.pagination.current_page = page;
-  await orderStore.loadOrders(buildParams());
+  await orderStore.loadOrders(buildParams(page));
   loading.value = false;
 };
 
@@ -523,7 +563,6 @@ const goToPage = (page) => {
   fetchOrders(page);
 };
 
-// ── Pagination helpers ─────────────────────────────────
 const fromItem = computed(() => {
   const p = orderStore.pagination;
   return (p.current_page - 1) * p.per_page + 1;
@@ -603,13 +642,23 @@ const orderStatusClass = (s) =>
     completed: "status-delivered-green",
     cancelled: "status-cancelled-red",
   }[s] || "");
+
 const paymentStatusLabel = (s) =>
-  ({ pending: "Chờ TT", paid: "Đã TT", failed: "Thất bại" }[s] || s);
+  ({
+    pending: "Chờ TT",
+    paid: "Đã TT",
+    failed: "Thất bại",
+    refund_pending: "Đang hoàn",
+    refunded: "Đã hoàn tiền",
+  }[s] || s);
+
 const paymentStatusClass = (s) =>
   ({
     pending: "status-pending-yellow",
     paid: "status-delivered-green",
     failed: "status-cancelled-red",
+    refund_pending: "status-shipping-blue",
+    refunded: "status-confirmed-purple",
   }[s] || "");
 </script>
 
@@ -628,23 +677,18 @@ const paymentStatusClass = (s) =>
   background-color: #f9fafb;
   color: #111827;
 }
-
-/* MAIN */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-
-/* CONTENT BODY */
 .content-body {
   padding: 32px;
   flex: 1;
   overflow-y: auto;
 }
 
-/* Page Header */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -678,7 +722,6 @@ const paymentStatusClass = (s) =>
   height: 18px;
 }
 
-/* Status Tabs */
 .status-tabs {
   display: flex;
   gap: 4px;
@@ -714,7 +757,6 @@ const paymentStatusClass = (s) =>
   background-color: #1a73e8;
 }
 
-/* Filter Bar */
 .filter-bar {
   display: flex;
   gap: 12px;
@@ -767,7 +809,6 @@ const paymentStatusClass = (s) =>
   border-color: #1a73e8;
 }
 
-/* Table */
 .table-container {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
@@ -807,6 +848,10 @@ const paymentStatusClass = (s) =>
 }
 .text-blue {
   color: #1a73e8;
+}
+.discount-text {
+  color: #16a34a !important;
+  font-weight: 600;
 }
 
 .customer-cell {
@@ -850,7 +895,6 @@ const paymentStatusClass = (s) =>
   color: #9ca3af;
 }
 
-/* Status Pills */
 .status-pill {
   padding: 4px 10px;
   border-radius: 20px;
@@ -880,7 +924,6 @@ const paymentStatusClass = (s) =>
   color: #b91c1c;
 }
 
-/* Actions */
 .action-buttons {
   display: flex;
   gap: 8px;
@@ -905,7 +948,6 @@ const paymentStatusClass = (s) =>
   height: 17px;
 }
 
-/* Loading / Empty */
 .loading-state,
 .empty-state {
   display: flex;
@@ -930,7 +972,6 @@ const paymentStatusClass = (s) =>
   }
 }
 
-/* Pagination */
 .pagination-footer {
   padding: 14px 18px;
   display: flex;
@@ -985,7 +1026,6 @@ const paymentStatusClass = (s) =>
   font-size: 13px;
 }
 
-/* Footer */
 .admin-footer {
   text-align: center;
   font-size: 13px;
@@ -994,7 +1034,6 @@ const paymentStatusClass = (s) =>
   padding-bottom: 20px;
 }
 
-/* ── MODALS ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1060,6 +1099,9 @@ const paymentStatusClass = (s) =>
   flex-direction: column;
   gap: 4px;
 }
+.detail-item-full {
+  grid-column: 1 / -1;
+}
 .detail-label {
   font-size: 11px;
   font-weight: 600;
@@ -1071,6 +1113,20 @@ const paymentStatusClass = (s) =>
   font-size: 14px;
   color: #111827;
   font-weight: 500;
+}
+
+.cancel-reason-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: 4px;
 }
 
 .items-section {
@@ -1101,15 +1157,29 @@ const paymentStatusClass = (s) =>
   padding: 10px 12px;
   border-bottom: 1px solid #f3f4f6;
 }
+.items-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px 0;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 4px;
+}
+.items-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6b7280;
+}
 .items-total {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 12px 0;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
   font-size: 14px;
   font-weight: 600;
-  border-top: 1px solid #e5e7eb;
-  margin-top: 4px;
+  color: #111827;
 }
 .total-final {
   font-size: 18px;

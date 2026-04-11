@@ -29,7 +29,7 @@
       </RouterLink>
 
       <!-- Đăng xuất tách riêng vì cần gọi hàm logout() trước khi redirect -->
-      <button class="nav-link text-danger" @click="handleLogout">
+      <router-link class="nav-link text-danger" to="/auth/logout">
         <span class="nav-icon">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -41,7 +41,7 @@
           </svg>
         </span>
         Đăng xuất
-      </button>
+      </router-link>
     </div>
   </aside>
 </template>
