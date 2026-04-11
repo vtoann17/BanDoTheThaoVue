@@ -11,105 +11,145 @@
           <p class="page-subtitle">Quản lý danh sách các sản phẩm bạn đã lưu để mua sau.</p>
         </div>
 
-        <div class="favorite-grid">
-          <div class="favorite-card" v-for="(product, index) in favoriteProducts" :key="index">
-            <button class="btn-heart">
-              <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+        <div v-if="loading" class="loading-state">Đang tải danh sách...</div>
+
+        <div v-else-if="favoriteProducts.length === 0" class="empty-state text-center py-10">
+          <p class="text-gray-500">Danh sách yêu thích của bạn đang trống.</p>
+          <router-link to="/products" class="text-blue-600 font-bold">Đi mua sắm ngay</router-link>
+        </div>
+
+        <div v-else class="favorite-grid">
+          <div class="favorite-card" v-for="item in favoriteProducts" :key="item.id">
+
+            <button class="btn-heart active" @click="removeFavorite(item.product_id)">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z">
+                </path>
+              </svg>
             </button>
 
             <div class="fav-img-wrap">
-              <img :src="product.image" :alt="product.name" class="fav-img" />
+              <img :src="`${baseUrl}/storage/${item.product.image}`" :alt="item.product.name" class="fav-img" />
             </div>
 
             <div class="fav-info">
-              <h3 class="fav-name">{{ product.name }}</h3>
+              <h3 class="fav-name">{{ item.product.name }}</h3>
               <div class="fav-meta">
-                <span class="fav-price">{{ product.price }}</span>
+                <span class="fav-price">{{ fmt(item.product.price) }}</span>
                 <span class="fav-rating">
-                  <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path></svg>
-                  {{ product.rating }}
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z">
+                    </path>
+                  </svg>
+                  {{ item.product.rating ?? '4.8' }}
                 </span>
               </div>
             </div>
 
-            <button class="btn-add-cart">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-              Thêm vào giỏ
-            </button>
+            <router-link :to="`/productdetail/${item.product.slug}`" class="btn-add-cart">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Xem chi tiết
+            </router-link>
           </div>
 
-          <div class="explore-card">
+          <router-link to="/products" class="explore-card">
             <div class="explore-icon">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                </path>
+              </svg>
             </div>
             <span class="explore-text">Khám phá thêm</span>
-          </div>
+          </router-link>
         </div>
 
       </section>
     </main>
-
-    <footer class="footer">
-      <div class="footer-container">
-        <div class="footer-brand">
-          <div class="footer-logo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M5.636 5.636a9 9 0 0112.728 0M12 2v20M2 12h20M5.636 18.364a9 9 0 0112.728 0"></path>
-            </svg>
-          </div>
-          <span class="footer-name">SportGear</span>
-        </div>
-        <div class="footer-copy">
-          © 2024 SportGear. Bản quyền thuộc về Công ty TNHH Thể Thao Việt.
-        </div>
-        <div class="footer-links">
-          <a href="#">Điều khoản</a>
-          <a href="#">Bảo mật</a>
-          <a href="#">Hỗ trợ</a>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import HeaderUser from '../../components/HeaderUser.vue'
-import SidebarUser from '../../components/SidebarUser.vue'
+import { ref, onMounted } from 'vue';
+import HeaderUser from '../../components/HeaderUser.vue';
+import SidebarUser from '../../components/SidebarUser.vue';
+import { useNotify } from "@/composables/useNotify";
 
-const favoriteProducts = ref([
-  {
-    name: 'Giày Chạy Bộ Nike Air Zoom Pegasus 40',
-    price: '3.250.000 VNĐ',
-    rating: '4.8',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80'
-  },
-  {
-    name: 'Vợt Cầu Lông Yonex Astrox 99 Pro Chính Hãng',
-    price: '4.100.000 VNĐ',
-    rating: '4.9',
-    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&q=80'
-  },
-  {
-    name: 'Thảm Tập Yoga Adidas 8mm Chống Trượt',
-    price: '850.000 VNĐ',
-    rating: '4.7',
-    image: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400&q=80'
-  },
-  {
-    name: 'Quả Bóng Đá Molten Vantaggio FIFA Quality',
-    price: '1.250.000 VNĐ',
-    rating: '4.5',
-    image: 'https://images.unsplash.com/photo-1614632537197-38a17061c2bd?w=400&q=80'
-  },
-  {
-    name: 'Găng Tay Tập Gym Harbinger Pro WristWrap',
-    price: '450.000 VNĐ',
-    rating: '4.6',
-    image: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&q=80'
+// Khởi tạo thông báo
+const { toastSuccess, toastError, toastInfo } = useNotify();
+
+// State
+const favoriteProducts = ref([]);
+const activeLink = ref('favorites');
+const user = ref({ name: 'Hoàng Anh' });
+const loading = ref(true);
+
+// Lấy Base URL (ví dụ: http://127.0.0.1:8000)
+const baseUrl = import.meta.env.VITE_API_BASE.replace("/api", "");
+
+// Hàm lấy Token từ object "auth" như bạn đã lưu
+const getToken = () => {
+  const authData = localStorage.getItem("auth");
+  return authData ? JSON.parse(authData).token : null;
+};
+
+// 1. Load danh sách yêu thích từ Database
+const fetchFavorites = async () => {
+  const token = getToken();
+  if (!token) {
+    toastError("Vui lòng đăng nhập để xem danh sách!");
+    return;
   }
-]);
+
+  loading.value = true;
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE}/favourites`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/json"
+      }
+    });
+
+    if (res.ok) {
+      favoriteProducts.value = await res.json();
+    } else {
+      toastError("Không thể lấy dữ liệu từ server");
+    }
+  } catch (err) {
+    toastError("Lỗi kết nối API");
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 2. Xóa khỏi danh sách yêu thích (Khi bấm vào nút trái tim ở trang này)
+const removeFavorite = async (productId) => {
+  const token = getToken();
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE}/favourites/${productId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+      // Cập nhật UI ngay lập tức bằng cách lọc bỏ sản phẩm vừa xóa
+      favoriteProducts.value = favoriteProducts.value.filter(item => item.product_id !== productId);
+      toastInfo("Đã xóa khỏi danh sách yêu thích");
+    }
+  } catch (err) {
+    toastError("Lỗi khi xóa sản phẩm");
+  }
+};
+
+const fmt = (n) => Number(n).toLocaleString("vi-VN") + "₫";
+
+onMounted(fetchFavorites);
 </script>
 
 <style scoped>
@@ -131,8 +171,13 @@ const favoriteProducts = ref([
   flex-direction: column;
 }
 
-a { text-decoration: none; }
-button { font-family: inherit; }
+a {
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
 
 /* --- Header --- */
 .header {
@@ -153,27 +198,142 @@ button { font-family: inherit; }
   justify-content: space-between;
 }
 
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand-icon { width: 36px; height: 36px; background-color: #1a73e8; color: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-.brand-icon svg { width: 22px; height: 22px; }
-.brand-name { font-size: 20px; font-weight: 700; color: #111827; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-.search-box { position: relative; flex: 1; max-width: 600px; margin: 0 40px; }
-.search-input { width: 100%; padding: 10px 16px 10px 44px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #f3f4f6; font-size: 14px; outline: none; transition: all 0.2s; color: #111827; }
-.search-input:focus { background-color: #ffffff; border-color: #1a73e8; }
-.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #9ca3af; }
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  background-color: #1a73e8;
+  color: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-.header-actions { display: flex; align-items: center; gap: 28px; }
-.cart-btn { background: none; border: none; cursor: pointer; color: #4b5563; position: relative; display: flex; align-items: center; }
-.cart-btn svg { width: 24px; height: 24px; }
-.cart-btn:hover { color: #111827; }
-.cart-badge { position: absolute; top: -6px; right: -8px; background-color: #f97316; color: #ffffff; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #ffffff; }
+.brand-icon svg {
+  width: 22px;
+  height: 22px;
+}
 
-.user-menu { display: flex; align-items: center; gap: 12px; padding-left: 28px; border-left: 1px solid #e5e7eb; cursor: pointer; }
-.user-text { display: flex; flex-direction: column; text-align: right; }
-.user-name { font-size: 14px; font-weight: 600; color: #111827;}
-.user-tier { font-size: 12px; color: #9ca3af; }
-.user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.brand-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  max-width: 600px;
+  margin: 0 40px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 44px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #f3f4f6;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+  color: #111827;
+}
+
+.search-input:focus {
+  background-color: #ffffff;
+  border-color: #1a73e8;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: #9ca3af;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.cart-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #4b5563;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cart-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+.cart-btn:hover {
+  color: #111827;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background-color: #f97316;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 28px;
+  border-left: 1px solid #e5e7eb;
+  cursor: pointer;
+}
+
+.user-text {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.user-tier {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
 
 /* --- Main Layout --- */
 .main-wrapper {
@@ -220,11 +380,29 @@ button { font-family: inherit; }
   transition: all 0.2s;
 }
 
-.nav-link:hover { background-color: #e5e7eb; color: #111827; }
-.nav-link.active { background-color: #eff6ff; color: #1a73e8; font-weight: 600; }
-.nav-link.text-danger { color: #dc2626; }
-.nav-link.text-danger:hover { background-color: #fee2e2; }
-.nav-icon { width: 20px; height: 20px; }
+.nav-link:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.nav-link.active {
+  background-color: #eff6ff;
+  color: #1a73e8;
+  font-weight: 600;
+}
+
+.nav-link.text-danger {
+  color: #dc2626;
+}
+
+.nav-link.text-danger:hover {
+  background-color: #fee2e2;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+}
 
 /* --- Content Area --- */
 .content {
@@ -236,12 +414,14 @@ button { font-family: inherit; }
 .page-header {
   margin-bottom: 32px;
 }
+
 .page-title {
   font-size: 24px;
   font-weight: 700;
   color: #111827;
   margin-bottom: 8px;
 }
+
 .page-subtitle {
   font-size: 15px;
   color: #6b7280;
@@ -256,7 +436,9 @@ button { font-family: inherit; }
 
 /* Responseive cho màn nhỏ hơn một chút */
 @media (max-width: 1024px) {
-  .favorite-grid { grid-template-columns: repeat(2, 1fr); }
+  .favorite-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .favorite-card {
@@ -284,14 +466,22 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ef4444; 
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  color: #ef4444;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   z-index: 10;
   transition: transform 0.2s;
 }
-.btn-heart:hover { transform: scale(1.1); }
-.btn-heart svg { width: 16px; height: 16px; fill: currentColor; }
+
+.btn-heart:hover {
+  transform: scale(1.1);
+}
+
+.btn-heart svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
 
 .fav-img-wrap {
   width: 100%;
@@ -304,6 +494,7 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: center;
 }
+
 .fav-img {
   width: 100%;
   height: 100%;
@@ -346,7 +537,13 @@ button { font-family: inherit; }
   align-items: center;
   gap: 4px;
 }
-.fav-rating svg { width: 14px; height: 14px; color: #fbbf24; fill: currentColor; }
+
+.fav-rating svg {
+  width: 14px;
+  height: 14px;
+  color: #fbbf24;
+  fill: currentColor;
+}
 
 .btn-add-cart {
   width: 100%;
@@ -365,8 +562,15 @@ button { font-family: inherit; }
   gap: 8px;
   transition: background-color 0.2s;
 }
-.btn-add-cart:hover { background-color: #1557b0; }
-.btn-add-cart svg { width: 18px; height: 18px; }
+
+.btn-add-cart:hover {
+  background-color: #1557b0;
+}
+
+.btn-add-cart svg {
+  width: 18px;
+  height: 18px;
+}
 
 /* --- Explore Card --- */
 .explore-card {
@@ -382,11 +586,13 @@ button { font-family: inherit; }
   transition: all 0.2s;
   min-height: 350px;
 }
+
 .explore-card:hover {
   border-color: #1a73e8;
   color: #1a73e8;
   background-color: #eff6ff;
 }
+
 .explore-icon {
   width: 48px;
   height: 48px;
@@ -397,11 +603,20 @@ button { font-family: inherit; }
   justify-content: center;
   transition: background-color 0.2s;
 }
+
 .explore-card:hover .explore-icon {
   background-color: #dbeafe;
 }
-.explore-icon svg { width: 24px; height: 24px; }
-.explore-text { font-size: 14px; font-weight: 600; }
+
+.explore-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.explore-text {
+  font-size: 14px;
+  font-weight: 600;
+}
 
 /* --- Footer --- */
 .footer {
@@ -420,12 +635,52 @@ button { font-family: inherit; }
   justify-content: space-between;
 }
 
-.footer-brand { display: flex; align-items: center; gap: 8px; }
-.footer-logo { width: 24px; height: 24px; background-color: #9ca3af; color: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
-.footer-logo svg { width: 14px; height: 14px; }
-.footer-name { font-size: 14px; font-weight: 700; color: #9ca3af; }
-.footer-copy { font-size: 13px; color: #9ca3af; }
-.footer-links { display: flex; gap: 24px; }
-.footer-links a { text-decoration: none; color: #4b5563; font-size: 13px; font-weight: 500; }
-.footer-links a:hover { color: #111827; }
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-logo {
+  width: 24px;
+  height: 24px;
+  background-color: #9ca3af;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-logo svg {
+  width: 14px;
+  height: 14px;
+}
+
+.footer-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.footer-copy {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-links a {
+  text-decoration: none;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.footer-links a:hover {
+  color: #111827;
+}
 </style>
