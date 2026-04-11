@@ -9,6 +9,7 @@ import { useShipping } from "@/stores/shipping";
 import { useCart } from "@/stores/carts";
 import { useOrder } from "@/stores/orders";
 import { usePayment } from "@/stores/payment";
+import { useCoupons } from "@/stores/coupons";
 
 const router = useRouter();
 const addressStore = useAddress();
@@ -16,6 +17,25 @@ const shippingStore = useShipping();
 const cartStore = useCart();
 const orderStore = useOrder();
 const paymentStore = usePayment();
+const couponStore = useCoupons();
+
+const couponCode = ref("");
+const discount = ref(0);
+const finalTotal = ref(null);
+const totalAfterDiscount = computed(() => {
+  return finalTotal.value ?? total.value;
+});
+
+const applyCoupon = async () => {
+  if (!couponCode.value) return;
+
+  const res = await couponStore.applyCoupon(couponCode.value, total.value);
+
+  if (res) {
+    discount.value = res.discount;
+    finalTotal.value = res.final_total;
+  }
+};
 
 const { addresses } = storeToRefs(addressStore);
 const { shippingFee } = storeToRefs(shippingStore);
@@ -63,6 +83,7 @@ const handleCheckout = async () => {
     alert("Vui lòng chọn địa chỉ giao hàng");
     return;
   }
+
   if (!items.value.length) {
     alert("Giỏ hàng trống");
     return;
@@ -71,8 +92,12 @@ const handleCheckout = async () => {
   const order = await orderStore.createOrder(
     selectedAddressId.value,
     paymentMethod.value,
-    shippingStore.shippingFee
+    shippingStore.shippingFee,
+    couponCode.value,
+    discount.value,
+    totalAfterDiscount.value
   );
+
   if (!order) return;
 
   if (paymentMethod.value === "vnpay") {
@@ -94,7 +119,11 @@ const handleCheckout = async () => {
       <nav class="breadcrumbs">
         <div class="step success">
           <svg class="icon-small" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
           </svg>
           Giỏ hàng
         </div>
@@ -115,15 +144,40 @@ const handleCheckout = async () => {
         <div class="form-section">
           <div class="section-header">
             <h2 class="section-title">
-              <svg class="icon-large text-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+              <svg
+                class="icon-large text-blue"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
+                />
               </svg>
               Thông tin vận chuyển
             </h2>
             <a href="/address" class="action-link">
-              <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                class="icon-small"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
               Quản lý địa chỉ
             </a>
@@ -134,55 +188,127 @@ const handleCheckout = async () => {
             <div class="form-group">
               <label>Chọn từ địa chỉ đã lưu</label>
               <div class="select-wrapper">
-                <select class="form-control" :value="selectedAddressId" @change="handleAddressChange">
-                  <option v-if="!addresses.length" value="" disabled>Đang tải địa chỉ...</option>
-                  <option v-for="addr in addresses" :key="addr.id" :value="addr.id">
+                <select
+                  class="form-control"
+                  :value="selectedAddressId"
+                  @change="handleAddressChange"
+                >
+                  <option v-if="!addresses.length" value="" disabled>
+                    Đang tải địa chỉ...
+                  </option>
+                  <option
+                    v-for="addr in addresses"
+                    :key="addr.id"
+                    :value="addr.id"
+                  >
                     {{ addr.is_default ? "★ " : "" }}{{ addr.address_detail }},
                     {{ addr.ward_name }}, {{ addr.district_name }},
                     {{ addr.province_name }}
                   </option>
                 </select>
-                <svg class="select-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                <svg
+                  class="select-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </div>
             </div>
 
             <div class="form-group">
               <label>Họ và tên</label>
-              <input type="text" v-model="form.fullName" class="form-control" placeholder="Tên người nhận" readonly />
+              <input
+                type="text"
+                v-model="form.fullName"
+                class="form-control"
+                placeholder="Tên người nhận"
+                readonly
+              />
             </div>
 
             <div class="form-group">
               <label>Số điện thoại</label>
-              <input type="tel" v-model="form.phone" class="form-control" placeholder="090 xxx xxxx" readonly />
+              <input
+                type="tel"
+                v-model="form.phone"
+                class="form-control"
+                placeholder="090 xxx xxxx"
+                readonly
+              />
             </div>
           </div>
 
           <!-- Phương thức thanh toán -->
           <h2 class="section-title margin-top-large">
-            <svg class="icon-large text-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+            <svg
+              class="icon-large text-blue"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+              />
             </svg>
             Phương thức thanh toán
           </h2>
 
           <div class="payment-methods">
-            <label class="payment-option" :class="{ active: paymentMethod === 'cod' }">
-              <input type="radio" name="payment" value="cod" v-model="paymentMethod" />
+            <label
+              class="payment-option"
+              :class="{ active: paymentMethod === 'cod' }"
+            >
+              <input
+                type="radio"
+                name="payment"
+                value="cod"
+                v-model="paymentMethod"
+              />
               <div class="payment-content">
-                <svg class="icon-xl text-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                <svg
+                  class="icon-xl text-gray"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
+                  />
                 </svg>
                 <div class="payment-info">
-                  <div class="payment-title">Thanh toán khi nhận hàng (COD)</div>
-                  <div class="payment-desc">Thanh toán bằng tiền mặt khi nhận hàng</div>
+                  <div class="payment-title">
+                    Thanh toán khi nhận hàng (COD)
+                  </div>
+                  <div class="payment-desc">
+                    Thanh toán bằng tiền mặt khi nhận hàng
+                  </div>
                 </div>
               </div>
             </label>
 
-            <label class="payment-option" :class="{ active: paymentMethod === 'vnpay' }">
-              <input type="radio" name="payment" value="vnpay" v-model="paymentMethod" />
+            <label
+              class="payment-option"
+              :class="{ active: paymentMethod === 'vnpay' }"
+            >
+              <input
+                type="radio"
+                name="payment"
+                value="vnpay"
+                v-model="paymentMethod"
+              />
               <div class="payment-content">
                 <div class="vnp-badge">VNP</div>
                 <div class="payment-info">
@@ -193,8 +319,16 @@ const handleCheckout = async () => {
             </label>
 
             <!-- ✅ MoMo option -->
-            <label class="payment-option" :class="{ active: paymentMethod === 'momo' }">
-              <input type="radio" name="payment" value="momo" v-model="paymentMethod" />
+            <label
+              class="payment-option"
+              :class="{ active: paymentMethod === 'momo' }"
+            >
+              <input
+                type="radio"
+                name="payment"
+                value="momo"
+                v-model="paymentMethod"
+              />
               <div class="payment-content">
                 <div class="momo-badge">M</div>
                 <div class="payment-info">
@@ -215,9 +349,16 @@ const handleCheckout = async () => {
               <div v-for="item in items" :key="item.id" class="product-item">
                 <div class="product-image">
                   <img
-                    :src="item.image || 'https://placehold.co/52x52/e5e7eb/9ca3af?text=SP'"
+                    :src="
+                      item.image ||
+                      'https://placehold.co/52x52/e5e7eb/9ca3af?text=SP'
+                    "
                     :alt="item.name"
-                    @error="(e) => (e.target.src = 'https://placehold.co/52x52/e5e7eb/9ca3af?text=SP')"
+                    @error="
+                      (e) =>
+                        (e.target.src =
+                          'https://placehold.co/52x52/e5e7eb/9ca3af?text=SP')
+                    "
                   />
                 </div>
                 <div class="product-details">
@@ -228,7 +369,9 @@ const handleCheckout = async () => {
                     </span>
                     <span>SL: {{ item.quantity }}</span>
                   </div>
-                  <div class="product-price">{{ fmt(item.price * item.quantity) }}</div>
+                  <div class="product-price">
+                    {{ fmt(item.price * item.quantity) }}
+                  </div>
                 </div>
               </div>
               <div v-if="!items.length" class="cart-empty-note">
@@ -238,6 +381,25 @@ const handleCheckout = async () => {
 
             <!-- Bảng giá -->
             <div class="price-breakdown">
+              <div class="coupon-box">
+                <input
+                  v-model="couponCode"
+                  class="form-control"
+                  placeholder="Nhập mã giảm giá"
+                />
+                <button
+                  class="btn-checkout"
+                  @click="applyCoupon"
+                  style="margin-top: 8px"
+                >
+                  Áp dụng mã
+                </button>
+              </div>
+
+              <div v-if="discount > 0" class="price-row">
+                <span>Giảm giá</span>
+                <span class="val-free">-{{ fmt(discount) }}</span>
+              </div>
               <div class="price-row">
                 <span>Tạm tính</span>
                 <span class="val-regular">{{ fmt(subtotal) }}</span>
@@ -251,7 +413,7 @@ const handleCheckout = async () => {
 
             <div class="total-row">
               <span class="total-label">Tổng cộng</span>
-              <span class="total-value">{{ fmt(total) }}</span>
+              <span class="total-value">{{ fmt(totalAfterDiscount) }}</span>
             </div>
 
             <!-- Nút đặt hàng -->
@@ -261,28 +423,67 @@ const handleCheckout = async () => {
               :disabled="loading || !items.length || !selectedAddressId"
               @click="handleCheckout"
             >
-              <svg v-if="loading" class="icon-spin" viewBox="0 0 24 24" fill="none">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              <svg
+                v-if="loading"
+                class="icon-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                />
               </svg>
               <span v-if="loading">Đang xử lý...</span>
               <span v-else>
                 {{
-                  paymentMethod === 'vnpay' ? 'Thanh toán VNPay' :
-                  paymentMethod === 'momo'  ? 'Thanh toán MoMo'  :
-                  'Đặt hàng (COD)'
+                  paymentMethod === "vnpay"
+                    ? "Thanh toán VNPay"
+                    : paymentMethod === "momo"
+                    ? "Thanh toán MoMo"
+                    : "Đặt hàng (COD)"
                 }}
               </span>
-              <svg v-if="!loading" class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              <svg
+                v-if="!loading"
+                class="icon-small"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                />
               </svg>
             </button>
           </div>
 
           <div class="back-link-wrapper">
             <a href="/cart" class="back-link">
-              <svg class="icon-small" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <svg
+                class="icon-small"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
               </svg>
               Quay lại giỏ hàng
             </a>
@@ -741,7 +942,11 @@ a {
   animation: spin 1s linear infinite;
 }
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

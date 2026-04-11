@@ -5,18 +5,35 @@ import AppHeader from "../components/AppHeader.vue";
 import AppFooter from "../components/AppFooter.vue";
 import { useOrder } from "../stores/orders";
 import { useShipping } from "@/stores/shipping";
+import { useAuth } from "@/stores/auth"; 
 
 const router = useRouter();
 const route = useRoute();
 const orderStore = useOrder();
 const shippingStore = useShipping();
+const authStore = useAuth();
 
 const order = computed(() => orderStore.currentOrder);
 const orderId = computed(() => route.query.order_id || order.value?.id);
 
 const fmt = (n) => Number(n).toLocaleString("vi-VN") + "đ";
 
+const subtotal = computed(() => {
+  if (!order.value?.items) return 0;
+  return order.value.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+});
+
+
+const totalAmount = computed(() => order.value?.total_amount ?? 0);
+const shippingFee = computed(() => order.value?.shipping_fee ?? 0);
+const discount = computed(() => order.value?.discount ?? 0);
+
 onMounted(async () => {
+  await authStore.getUser();
+  
   const id = route.query.order_id;
   if (id) {
     await orderStore.getOrder(id);
@@ -92,22 +109,26 @@ onMounted(async () => {
 
           <div class="detail-divider"></div>
 
+          <!-- Breakdown -->
           <div class="total-breakdown-row">
             <span class="detail-label">Tiền hàng</span>
-            <span class="detail-value">{{ fmt(order.total_amount) }}</span>
+            <span class="detail-value">{{ fmt(subtotal) }}</span>
           </div>
           <div class="total-breakdown-row">
             <span class="detail-label">Phí vận chuyển</span>
-            <span class="detail-value">{{ fmt(order.shipping_fee ?? 0) }}</span>
+            <span class="detail-value">{{ fmt(shippingFee) }}</span>
+          </div>
+          <div class="total-breakdown-row" v-if="discount > 0">
+            <span class="detail-label">Giảm giá</span>
+            <span class="detail-value discount-value">-{{ fmt(discount) }}</span>
           </div>
 
           <div class="detail-divider"></div>
 
+          <!-- Tổng thanh toán = total_amount (đã gồm ship, đã trừ discount) -->
           <div class="total-row">
             <span>Tổng thanh toán</span>
-            <span class="total-amount">
-              {{ fmt((order.total_amount ?? 0) + (order.shipping_fee ?? 0)) }}
-            </span>
+            <span class="total-amount">{{ fmt(totalAmount) }}</span>
           </div>
         </div>
 
@@ -350,6 +371,9 @@ button {
   justify-content: space-between;
   align-items: center;
   font-size: 13px;
+}
+.discount-value {
+  color: #16a34a !important;
 }
 .total-row {
   display: flex;

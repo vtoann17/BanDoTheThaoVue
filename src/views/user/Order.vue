@@ -1,15 +1,38 @@
-  <script setup>
+<script setup>
 import { ref, onMounted, computed } from "vue";
 import HeaderUser from "../../components/HeaderUser.vue";
 import SidebarUser from "../../components/SidebarUser.vue";
 import { useOrder } from "@/stores/orders";
 import { useShipping } from "@/stores/shipping";
+import { useCart } from "@/stores/carts";
+import { useRouter } from "vue-router";
 
 const shippingStore = useShipping();
 const orderStore = useOrder();
 const activeLink = ref("orders");
 const activeTab = ref("all");
+const cartStore = useCart();
+const router = useRouter();
 const baseUrl = import.meta.env.VITE_API_BASE.replace("/api", "");
+
+const showCancelModal = ref(false);
+const cancelOrderId = ref(null);
+const cancelReason = ref("");
+const cancelReasons = [
+  "Đặt nhầm sản phẩm",
+  "Muốn thay đổi địa chỉ giao hàng",
+  "Tìm được giá tốt hơn",
+  "Không còn nhu cầu",
+  "Khác",
+];
+
+const showDetailModal = ref(false);
+const selectedOrder = ref(null);
+
+const openDetail = (order) => {
+  selectedOrder.value = order;
+  showDetailModal.value = true;
+};
 
 const tabs = [
   { label: "Tất cả", value: "all" },
@@ -35,31 +58,56 @@ const filteredOrders = computed(() => {
   return orderStore.orders.filter((o) => o.order_status === activeTab.value);
 });
 
+// Tính subtotal từ items cho một đơn hàng
+const getSubtotal = (order) => {
+  if (!order?.items) return 0;
+  return order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+};
+
 const selectTab = async (tab) => {
   activeTab.value = tab;
   if (tab === "all") {
-    await orderStore.loadOrders();
+    await orderStore.loadOrders({ per_page: 2, sort_by: 'created_at', sort_dir: 'desc' });
   } else {
-    await orderStore.loadOrders({ status: tab });
+    await orderStore.loadOrders({ per_page: 2, order_status: tab, sort_by: 'created_at', sort_dir: 'desc' });
   }
 };
 
 onMounted(async () => {
-  await orderStore.loadOrders();
+  await orderStore.loadOrders({ per_page: 2, sort_by: 'created_at', sort_dir: 'desc' });
 });
+
 const goToPage = async (page) => {
   if (page < 1 || page > orderStore.pagination.last_page) return;
-  const params = { page };
+  const params = { per_page: 2, page, sort_by: 'created_at', sort_dir: 'desc' };
   if (activeTab.value !== "all") params.order_status = activeTab.value;
   await orderStore.loadOrders(params);
 };
-const cancelOrder = async (id) => {
-  if (!confirm("Bạn có chắc muốn hủy đơn hàng này?")) return;
-  await orderStore.cancelOrder(id);
+
+const openCancelModal = (id) => {
+  cancelOrderId.value = id;
+  cancelReason.value = "";
+  showCancelModal.value = true;
+};
+
+const confirmCancel = async () => {
+  const result = await orderStore.cancelOrder(cancelOrderId.value, cancelReason.value || null);
+  showCancelModal.value = false;
+  if (result) {
+    const params = { per_page: 2, page: orderStore.pagination.current_page, sort_by: 'created_at', sort_dir: 'desc' };
+    if (activeTab.value !== "all") params.order_status = activeTab.value;
+    await orderStore.loadOrders(params);
+  }
+};
+const reorder = async (orderId) => {
+  const result = await cartStore.reOrder(orderId);
+  if (result) {
+    router.push("/cart");
+  }
 };
 </script>
 
-  <template>
+<template>
   <div class="profile-page">
     <HeaderUser :cart-count="3" :user="user" />
 
@@ -74,7 +122,6 @@ const cancelOrder = async (id) => {
           </p>
         </div>
 
-        <!-- Tabs -->
         <ul class="tabs-list">
           <li
             v-for="tab in tabs"
@@ -86,19 +133,15 @@ const cancelOrder = async (id) => {
           </li>
         </ul>
 
-        <!-- Danh sách đơn hàng -->
         <div class="order-list">
-          <!-- Loading state -->
           <div v-if="orderStore.$state.loading" class="loading-state">
             Đang tải...
           </div>
 
-          <!-- Empty state -->
           <div v-else-if="filteredOrders.length === 0" class="empty-state">
             Không có đơn hàng nào.
           </div>
 
-          <!-- Order cards -->
           <div
             class="order-card"
             v-for="order in filteredOrders"
@@ -118,7 +161,6 @@ const cancelOrder = async (id) => {
                   </span>
                 </div>
               </div>
-
               <div
                 :class="[
                   'status-badge',
@@ -145,7 +187,9 @@ const cancelOrder = async (id) => {
                   class="product-img"
                 />
                 <div class="product-details">
-                  <h4 class="product-name">{{ item.product?.name }}</h4>
+                  <h4 class="product-name">
+                    {{ item.variant?.product?.name }}
+                  </h4>
                   <p class="product-variant">
                     Phân loại:
                     {{ item.variant?.sku ?? item.variant?.color ?? "—" }}
@@ -155,6 +199,16 @@ const cancelOrder = async (id) => {
                     {{ Number(item.price).toLocaleString("vi-VN") }}đ
                   </p>
                 </div>
+              </div>
+
+              <div
+                v-if="order.order_status === 'cancelled' && order.cancel_reason"
+                class="cancel-reason"
+              >
+                <span class="cancel-reason-label">Lý do hủy:</span>
+                <span class="cancel-reason-text">{{
+                  order.cancel_reason
+                }}</span>
               </div>
             </div>
 
@@ -168,29 +222,32 @@ const cancelOrder = async (id) => {
                     }}đ</span
                   >
                 </div>
+                <div v-if="order.discount > 0" class="total-breakdown">
+                  <span class="total-text">Giảm giá:</span>
+                  <span class="total-sub discount-text"
+                    >-{{ Number(order.discount).toLocaleString("vi-VN") }}đ</span
+                  >
+                </div>
                 <div class="total-divider"></div>
                 <div class="total-breakdown">
-                  <span class="total-text total-label-final"
-                    >Tổng thanh toán:</span
-                  >
+                  <span class="total-text total-label-final">Tổng thanh toán:</span>
+                  <!-- total_amount đã gồm ship và đã trừ discount -->
                   <span class="total-amount">
-                    {{
-                      Number(
-                        (order.total_amount ?? 0) + (order.shipping_fee ?? 0)
-                      ).toLocaleString("vi-VN")
-                    }}đ
+                    {{ Number(order.total_amount ?? 0).toLocaleString("vi-VN") }}đ
                   </span>
                 </div>
               </div>
               <div class="order-actions">
-                <button class="btn-outline">Xem chi tiết</button>
+                <button class="btn-outline" @click="openDetail(order)">
+                  Xem chi tiết
+                </button>
                 <button
                   v-if="
                     order.order_status === 'pending' ||
                     order.order_status === 'confirmed'
                   "
                   class="btn-danger"
-                  @click="cancelOrder(order.id)"
+                  @click="openCancelModal(order.id)"
                 >
                   Hủy đơn
                 </button>
@@ -200,6 +257,7 @@ const cancelOrder = async (id) => {
                     order.order_status === 'completed'
                   "
                   class="btn-primary"
+                  @click="reorder(order.id)"
                 >
                   Mua lại
                 </button>
@@ -223,7 +281,6 @@ const cancelOrder = async (id) => {
               />
             </svg>
           </button>
-
           <button
             v-for="page in orderStore.pagination.last_page"
             :key="page"
@@ -235,7 +292,6 @@ const cancelOrder = async (id) => {
           >
             {{ page }}
           </button>
-
           <button
             class="page-btn"
             :disabled="
@@ -256,6 +312,183 @@ const cancelOrder = async (id) => {
         </div>
       </section>
     </main>
+
+    <!-- Modal xem chi tiết -->
+    <div
+      v-if="showDetailModal"
+      class="modal-overlay"
+      @click.self="showDetailModal = false"
+    >
+      <div class="detail-modal">
+        <div class="detail-modal-header">
+          <div>
+            <h3 class="detail-modal-title">
+              Chi tiết đơn hàng #{{ selectedOrder?.id }}
+            </h3>
+            <p class="detail-modal-date">
+              Đặt ngày
+              {{
+                new Date(selectedOrder?.created_at).toLocaleDateString("vi-VN")
+              }}
+            </p>
+          </div>
+          <button class="detail-modal-close" @click="showDetailModal = false">
+            ✕
+          </button>
+        </div>
+
+        <div class="detail-modal-body" v-if="selectedOrder">
+          <!-- Trạng thái -->
+          <div class="detail-section">
+            <div class="detail-status-row">
+              <div class="detail-status-item">
+                <span class="detail-status-label">Trạng thái đơn</span>
+                <span
+                  :class="[
+                    'status-badge',
+                    getStatusInfo(selectedOrder.order_status).class,
+                  ]"
+                >
+                  {{ getStatusInfo(selectedOrder.order_status).text }}
+                </span>
+              </div>
+              <div class="detail-status-item">
+                <span class="detail-status-label">Phương thức TT</span>
+                <span class="detail-status-value">{{
+                  selectedOrder.payment_method?.toUpperCase()
+                }}</span>
+              </div>
+              <div class="detail-status-item">
+                <span class="detail-status-label">Trạng thái TT</span>
+                <span class="detail-status-value">{{
+                  {
+                    pending: "Chờ TT",
+                    paid: "Đã TT",
+                    failed: "Thất bại",
+                    refund_pending: "Đang hoàn",
+                    refunded: "Đã hoàn tiền",
+                  }[selectedOrder.payment_status] ||
+                  selectedOrder.payment_status
+                }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lý do hủy -->
+          <div
+            v-if="
+              selectedOrder.order_status === 'cancelled' &&
+              selectedOrder.cancel_reason
+            "
+            class="detail-cancel-reason"
+          >
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span
+              ><strong>Lý do hủy:</strong>
+              {{ selectedOrder.cancel_reason }}</span
+            >
+          </div>
+
+          <!-- Sản phẩm -->
+          <div class="detail-section">
+            <h4 class="detail-section-title">Sản phẩm</h4>
+            <div class="detail-product-list">
+              <div
+                class="detail-product-item"
+                v-for="item in selectedOrder.items"
+                :key="item.id"
+              >
+                <img
+                  :src="
+                    item.variant?.img
+                      ? `${baseUrl}/storage/${item.variant.img}`
+                      : '/placeholder.png'
+                  "
+                  :alt="item.variant?.product?.name"
+                  class="detail-product-img"
+                />
+                <div class="detail-product-info">
+                  <p class="detail-product-name">
+                    {{ item.variant?.product?.name || "—" }}
+                  </p>
+                  <p class="detail-product-sku">
+                    SKU: {{ item.variant?.sku || "—" }}
+                  </p>
+                  <p class="detail-product-qty">
+                    Số lượng: {{ item.quantity }}
+                  </p>
+                </div>
+                <div class="detail-product-price">
+                  {{
+                    Number(item.price * item.quantity).toLocaleString("vi-VN")
+                  }}đ
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tổng tiền -->
+          <div class="detail-section detail-summary">
+            <div class="detail-summary-row">
+              <span>Tiền hàng</span>
+              <span>{{ Number(getSubtotal(selectedOrder)).toLocaleString("vi-VN") }}đ</span>
+            </div>
+            <div class="detail-summary-row">
+              <span>Phí vận chuyển</span>
+              <span>{{ Number(selectedOrder.shipping_fee ?? 0).toLocaleString("vi-VN") }}đ</span>
+            </div>
+            <div class="detail-summary-row" v-if="selectedOrder.discount > 0">
+              <span>Giảm giá</span>
+              <span class="discount-text">-{{ Number(selectedOrder.discount).toLocaleString("vi-VN") }}đ</span>
+            </div>
+            <!-- total_amount = subtotal + shipping - discount, không cộng thêm -->
+            <div class="detail-summary-row detail-summary-total">
+              <span>Tổng thanh toán</span>
+              <span>{{ Number(selectedOrder.total_amount ?? 0).toLocaleString("vi-VN") }}đ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal hủy đơn -->
+    <div
+      v-if="showCancelModal"
+      class="modal-overlay"
+      @click.self="showCancelModal = false"
+    >
+      <div class="modal">
+        <h3 class="modal-title">Hủy đơn hàng</h3>
+        <p class="modal-desc">Vui lòng chọn lý do hủy đơn</p>
+        <div class="reason-list">
+          <label v-for="r in cancelReasons" :key="r" class="reason-item">
+            <input type="radio" :value="r" v-model="cancelReason" />
+            {{ r }}
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-outline" @click="showCancelModal = false">
+            Quay lại
+          </button>
+          <button class="btn-danger" @click="confirmCancel">
+            Xác nhận hủy
+          </button>
+        </div>
+      </div>
+    </div>
 
     <footer class="footer">
       <div class="footer-container">
@@ -288,12 +521,9 @@ const cancelOrder = async (id) => {
   </div>
 </template>
 
-
-
-  <style scoped>
+<style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-/* --- Global Reset & Variables --- */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -302,13 +532,12 @@ const cancelOrder = async (id) => {
 
 .profile-page {
   font-family: "Inter", sans-serif;
-  background-color: #f9fafb; /* Nền xám nhạt */
+  background-color: #f9fafb;
   color: #111827;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
-
 a {
   text-decoration: none;
 }
@@ -316,149 +545,6 @@ button {
   font-family: inherit;
 }
 
-/* --- Header --- */
-.header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-container {
-  max-width: 1440px;
-  margin: 0 auto;
-  height: 72px;
-  padding: 0 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.brand-icon {
-  width: 36px;
-  height: 36px;
-  background-color: #1a73e8;
-  color: #ffffff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.brand-icon svg {
-  width: 22px;
-  height: 22px;
-}
-.brand-name {
-  font-size: 20px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.search-box {
-  position: relative;
-  flex: 1;
-  max-width: 600px;
-  margin: 0 40px;
-}
-.search-input {
-  width: 100%;
-  padding: 10px 16px 10px 44px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background-color: #f3f4f6;
-  font-size: 14px;
-  outline: none;
-  transition: all 0.2s;
-  color: #111827;
-}
-.search-input:focus {
-  background-color: #ffffff;
-  border-color: #1a73e8;
-}
-.search-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: #9ca3af;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-}
-.cart-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #4b5563;
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.cart-btn svg {
-  width: 24px;
-  height: 24px;
-}
-.cart-btn:hover {
-  color: #111827;
-}
-.cart-badge {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  background-color: #f97316;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 700;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #ffffff;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-left: 28px;
-  border-left: 1px solid #e5e7eb;
-  cursor: pointer;
-}
-.user-text {
-  display: flex;
-  flex-direction: column;
-  text-align: right;
-}
-.user-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-}
-.user-tier {
-  font-size: 12px;
-  color: #9ca3af;
-}
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* --- Main Layout --- */
 .main-wrapper {
   max-width: 1440px;
   margin: 0 auto;
@@ -468,69 +554,12 @@ button {
   width: 100%;
   flex: 1;
 }
-
-/* --- Sidebar --- */
-.sidebar {
-  width: 260px;
-  flex-shrink: 0;
-}
-
-.nav-section {
-  margin-bottom: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.nav-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #9ca3af;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
-  padding-left: 16px;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  color: #4b5563;
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s;
-}
-
-.nav-link:hover {
-  background-color: #e5e7eb;
-  color: #111827;
-}
-.nav-link.active {
-  background-color: #eff6ff;
-  color: #1a73e8;
-  font-weight: 600;
-}
-.nav-link.text-danger {
-  color: #dc2626;
-}
-.nav-link.text-danger:hover {
-  background-color: #fee2e2;
-}
-.nav-icon {
-  width: 20px;
-  height: 20px;
-}
-
-/* --- Content Area --- */
 .content {
   flex: 1;
   min-width: 0;
   max-width: 900px;
 }
 
-/* Page Header */
 .page-header {
   margin-bottom: 32px;
 }
@@ -545,15 +574,11 @@ button {
   color: #6b7280;
 }
 
-/* Tabs */
-.tabs-wrapper {
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 32px;
-}
 .tabs-list {
   display: flex;
   list-style: none;
   gap: 32px;
+  margin-bottom: 24px;
 }
 .tab-item {
   font-size: 15px;
@@ -581,59 +606,50 @@ button {
   background-color: #1a73e8;
 }
 
-/* Order Cards */
 .order-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 12px;
 }
-
 .order-card {
   background-color: #ffffff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
 }
 
-/* Order Header */
 .order-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f3f4f6;
 }
-
 .order-meta-group {
   display: flex;
   align-items: center;
   gap: 20px;
 }
-
 .meta-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-
 .meta-label {
   font-size: 11px;
   font-weight: 700;
   color: #9ca3af;
 }
-
 .meta-value {
   font-size: 15px;
   font-weight: 700;
   color: #111827;
 }
-
 .meta-divider {
   width: 1px;
   height: 36px;
   background-color: #e5e7eb;
 }
 
-/* Badges */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -643,11 +659,14 @@ button {
   font-size: 12px;
   font-weight: 700;
 }
-.badge-icon :deep(svg) {
-  width: 14px;
-  height: 14px;
+.status-pending {
+  background-color: #fff7ed;
+  color: #ea580c;
 }
-
+.status-confirmed {
+  background-color: #fef9c3;
+  color: #ca8a04;
+}
 .status-shipping {
   background-color: #eff6ff;
   color: #1a73e8;
@@ -661,85 +680,113 @@ button {
   color: #6b7280;
 }
 
-/* Order Body */
 .order-body {
-  padding: 24px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-
 .product-item {
   display: flex;
   align-items: center;
   gap: 20px;
 }
-
 .product-img {
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   border-radius: 8px;
   object-fit: cover;
   border: 1px solid #f3f4f6;
 }
-
 .product-details {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-
 .product-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #111827;
   margin-bottom: 2px;
 }
-
 .product-variant {
   font-size: 13px;
   color: #6b7280;
 }
-
 .product-qty {
   font-size: 13px;
   color: #6b7280;
 }
-
 .product-price {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: #1a73e8;
   margin-top: 4px;
 }
 
-/* Order Footer */
+.cancel-reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #fef2f2;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+}
+.cancel-reason-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #dc2626;
+}
+.cancel-reason-text {
+  font-size: 13px;
+  color: #6b7280;
+}
+
 .order-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 10px 16px;
   border-top: 1px solid #f3f4f6;
   background-color: #fafbfc;
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 12px;
 }
-
 .order-total {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
+.total-breakdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .total-text {
   font-size: 14px;
   color: #6b7280;
 }
-
+.total-sub {
+  font-size: 14px;
+  color: #111827;
+}
+.discount-text {
+  color: #16a34a;
+  font-weight: 600;
+}
+.total-divider {
+  width: 1px;
+  height: 20px;
+  background-color: #e5e7eb;
+  margin: 0 4px;
+}
 .total-amount {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #1a73e8;
 }
-
 .order-actions {
   display: flex;
   gap: 12px;
@@ -759,7 +806,6 @@ button {
 .btn-outline:hover {
   background-color: #f9fafb;
 }
-
 .btn-primary {
   background-color: #1a73e8;
   color: #ffffff;
@@ -774,8 +820,21 @@ button {
 .btn-primary:hover {
   background-color: #1557b0;
 }
+.btn-danger {
+  background-color: #ffffff;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-danger:hover {
+  background-color: #fee2e2;
+}
 
-/* --- Pagination --- */
 .pagination {
   display: flex;
   justify-content: center;
@@ -783,7 +842,6 @@ button {
   gap: 8px;
   margin-top: 40px;
 }
-
 .page-btn {
   width: 40px;
   height: 40px;
@@ -798,7 +856,6 @@ button {
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .page-btn:hover:not(.active) {
   background-color: #f3f4f6;
 }
@@ -813,14 +870,244 @@ button {
   height: 18px;
 }
 
-/* --- Footer --- */
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+/* Detail Modal */
+.detail-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+}
+.detail-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+.detail-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+.detail-modal-date {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+.detail-modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.detail-modal-close:hover {
+  background: #f3f4f6;
+  color: #111;
+}
+.detail-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.detail-section {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 16px;
+}
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 14px;
+}
+.detail-status-row {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.detail-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.detail-status-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+.detail-status-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+.detail-cancel-reason {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #dc2626;
+}
+.detail-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.detail-product-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.detail-product-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.detail-product-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.detail-product-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.detail-product-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+.detail-product-sku {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.detail-product-qty {
+  font-size: 13px;
+  color: #6b7280;
+}
+.detail-product-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a73e8;
+  white-space: nowrap;
+}
+.detail-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.detail-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #6b7280;
+}
+.detail-summary-total {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+}
+.detail-summary-total span:last-child {
+  color: #1a73e8;
+}
+
+/* Cancel Modal */
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+.modal-desc {
+  font-size: 14px;
+  color: #6b7280;
+}
+.reason-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.reason-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s;
+}
+.reason-item:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+.reason-item input {
+  accent-color: #1a73e8;
+  width: 16px;
+  height: 16px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Footer */
 .footer {
   background-color: #ffffff;
   border-top: 1px solid #e5e7eb;
   padding: 24px 0;
   margin-top: auto;
 }
-
 .footer-container {
   max-width: 1440px;
   margin: 0 auto;
@@ -829,7 +1116,6 @@ button {
   align-items: center;
   justify-content: space-between;
 }
-
 .footer-brand {
   display: flex;
   align-items: center;
@@ -854,12 +1140,10 @@ button {
   font-weight: 700;
   color: #9ca3af;
 }
-
 .footer-copy {
   font-size: 13px;
   color: #9ca3af;
 }
-
 .footer-links {
   display: flex;
   gap: 24px;
@@ -873,27 +1157,12 @@ button {
 .footer-links a:hover {
   color: #111827;
 }
-.status-confirmed {
-  background-color: #fef9c3;
-  color: #ca8a04;
-}
 
-.status-pending {
-  background-color: #fff7ed;
-  color: #ea580c;
-}
-.btn-danger {
-  background-color: #ffffff;
-  color: #dc2626;
-  border: 1px solid #dc2626;
-  padding: 8px 16px;
-  border-radius: 6px;
+.loading-state,
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
   font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.btn-danger:hover {
-  background-color: #fee2e2;
 }
 </style>

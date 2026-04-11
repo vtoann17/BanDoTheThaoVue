@@ -8,9 +8,11 @@ export const useCoupons = defineStore("coupons", () => {
     const coupons = ref([]);
     const notify = useNotify();
     const apiBase = import.meta.env.VITE_API_BASE;
+
     const authHeaders = () => ({
         Authorization: `Bearer ${getToken()}`,
     });
+
     const loadCoupons = async () => {
         try {
             const res = await axios.get(`${apiBase}/coupons`, {
@@ -22,12 +24,13 @@ export const useCoupons = defineStore("coupons", () => {
             notify.toastError("Không tải được danh sách mã giảm giá");
         }
     };
+
     const createCoupon = async (formData) => {
         try {
             const res = await axios.post(`${apiBase}/coupons`, formData, {
                 headers: {
                     ...authHeaders(),
-                    "Content-Type": "multipart/form-data",
+                    "Content-Type": "application/json",
                 },
             });
             if (res.status === 200 || res.status === 201) {
@@ -41,6 +44,7 @@ export const useCoupons = defineStore("coupons", () => {
             return null;
         }
     };
+
     const updateCoupon = async (id, payload) => {
         try {
             const res = await axios.put(`${apiBase}/coupons/${id}`, payload, {
@@ -62,6 +66,7 @@ export const useCoupons = defineStore("coupons", () => {
             return null;
         }
     };
+
     const getCouponById = async (id) => {
         try {
             const res = await axios.get(`${apiBase}/coupons/${id}`, {
@@ -74,8 +79,9 @@ export const useCoupons = defineStore("coupons", () => {
             return null;
         }
     };
+
     const deleteCoupon = async (id) => {
-        if (!id) return false; // ← guard thêm
+        if (!id) return false;
         const confirmed = await notify.swalConfirm(
             "Bạn có muốn xóa không?",
             "Bạn chắc chắn chứ"
@@ -99,6 +105,23 @@ export const useCoupons = defineStore("coupons", () => {
         }
     };
 
+    const applyCoupon = async (code, orderTotal) => {
+        try {
+            const res = await axios.post(`${apiBase}/coupons/apply`, {
+                code,
+                order_total: orderTotal,
+            });
+            if (res.status === 200) {
+                notify.toastSuccess("Áp dụng mã giảm giá thành công");
+                return res.data; // { code, discount_type, discount, final_total }
+            }
+        } catch (error) {
+            const msg = error.response?.data?.message || "Mã giảm giá không hợp lệ";
+            notify.toastError(msg);
+            return null;
+        }
+    };
+
     return {
         coupons,
         getCouponById,
@@ -106,5 +129,6 @@ export const useCoupons = defineStore("coupons", () => {
         createCoupon,
         updateCoupon,
         deleteCoupon,
+        applyCoupon, 
     };
 });
