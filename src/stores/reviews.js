@@ -4,7 +4,9 @@ import { ref } from "vue";
 import { useNotify } from "@/composables/useNotify";
 
 export const useReviews = defineStore("reviews", () => {
-  const getToken = () =>JSON.parse(localStorage.getItem("auth") || "{}")?.token ?? null;
+  const getToken = () =>
+    JSON.parse(localStorage.getItem("auth") || "{}")?.token ?? null;
+
   const reviews = ref([]);
   const notify = useNotify();
   const total = ref(0);
@@ -12,11 +14,12 @@ export const useReviews = defineStore("reviews", () => {
   const lastPage = ref(1);
   const perPage = ref(5);
   const apiBase = import.meta.env.VITE_API_BASE;
+
   const authHeaders = () => ({
     Authorization: `Bearer ${getToken()}`,
   });
 
-
+  // Load danh sách
   const loadReviews = async (params = {}) => {
     try {
       const res = await axios.get(`${apiBase}/reviews`, {
@@ -25,10 +28,10 @@ export const useReviews = defineStore("reviews", () => {
       });
       if (res.data?.data) {
         reviews.value = res.data.data;
-        total.value       = res.data.total ?? 0;
+        total.value = res.data.total ?? 0;
         currentPage.value = res.data.current_page ?? 1;
-        lastPage.value    = res.data.last_page ?? 1;
-        perPage.value     = res.data.per_page ?? 10;
+        lastPage.value = res.data.last_page ?? 1;
+        perPage.value = res.data.per_page ?? 10;
       } else {
         reviews.value = Array.isArray(res.data) ? res.data : [];
       }
@@ -37,29 +40,29 @@ export const useReviews = defineStore("reviews", () => {
     }
   };
 
+  // Thêm
   const createReview = async (formData) => {
-  try {
-    const res = await axios.post(`${apiBase}/reviews`, formData, {
-      headers: {
-        ...authHeaders(),
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    // console.log("status:", res.status);
-    // console.log("data:", res.data);
-    if (res.status === 200 || res.status === 201) {
-      reviews.value.push(res.data.data);
-      notify.toastSuccess("Thêm đánh giá thành công");
-      return res.data.data;
+    try {
+      const res = await axios.post(`${apiBase}/reviews`, formData, {
+        headers: {
+          ...authHeaders(),
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      if (res.status === 200 || res.status === 201) {
+        reviews.value.unshift(res.data.data);
+        notify.toastSuccess("Thêm đánh giá thành công");
+        return res.data.data;
+      }
+    } catch (error) {
+      const msg =
+        error.response?.data?.message || "Lỗi không thêm được đánh giá";
+      notify.toastError(msg);
+      return null;
     }
-  } catch (error) {
-    const msg = error.response?.data?.message || "Lỗi không thêm được đánh giá";
-    notify.toastError(msg);
-    return null;
-  }
-};
+  };
 
-
+  // Sửa
   const updateReview = async (id, formData) => {
     try {
       formData.append("_method", "PUT");
@@ -72,13 +75,12 @@ export const useReviews = defineStore("reviews", () => {
       });
 
       if (res.status === 200) {
-        const idx = reviews.value.findIndex((c) => c.id === id);
+        const idx = reviews.value.findIndex((r) => r.id === id);
         if (idx !== -1) reviews.value[idx] = res.data.data;
         notify.toastSuccess("Sửa đánh giá thành công");
         return res.data.data;
       }
     } catch (error) {
-      console.error("updateReview:", error);
       const msg =
         error.response?.data?.message || "Lỗi không sửa được đánh giá";
       notify.toastError(msg);
@@ -86,6 +88,7 @@ export const useReviews = defineStore("reviews", () => {
     }
   };
 
+  // Xoá
   const deleteReview = async (id) => {
     const confirmed = await notify.swalConfirm(
       "Bạn có muốn xóa không?",
@@ -99,12 +102,11 @@ export const useReviews = defineStore("reviews", () => {
       });
 
       if (res.status === 200) {
-        reviews.value = reviews.value.filter((c) => c.id !== id);
+        reviews.value = reviews.value.filter((r) => r.id !== id);
         notify.toastSuccess("Xóa đánh giá thành công");
         return true;
       }
     } catch (error) {
-      console.error("deleteReview:", error);
       notify.toastError("Lỗi không xóa được đánh giá");
       return false;
     }
@@ -114,7 +116,7 @@ export const useReviews = defineStore("reviews", () => {
     reviews,
     total,
     currentPage,
-    lastPage, 
+    lastPage,
     perPage,
     loadReviews,
     createReview,

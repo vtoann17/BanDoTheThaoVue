@@ -9,7 +9,6 @@ export const useOrder = defineStore("order", () => {
 
     const orders = ref([]);
     const currentOrder = ref(null);
-    const notify = useNotify();
     const apiBase = import.meta.env.VITE_API_BASE;
     const pagination = ref({
         total: 0,
@@ -23,6 +22,7 @@ export const useOrder = defineStore("order", () => {
     });
 
     const loadOrders = async (params = {}) => {
+        const notify = useNotify();
         try {
             const res = await axios.get(`${apiBase}/orders`, {
                 headers: authHeaders(),
@@ -31,27 +31,31 @@ export const useOrder = defineStore("order", () => {
                     sort_dir: 'desc',
                     ...params,
                 }
-
             });
-            console.log('API response:', res.data);
+
+            console.log("API response:", res.data);
 
             orders.value = res.data.data || [];
-            const meta = res.data.meta ?? res.data;
+
             pagination.value = {
-                total: meta.total ?? 0,
-                per_page: meta.per_page ?? 10,
-                current_page: meta.current_page ?? 1,
-                last_page: meta.last_page ?? 1,
+                total: res.data.total || 0,
+                per_page: res.data.per_page || 10,
+                current_page: res.data.current_page || 1,
+                last_page: res.data.last_page || 1,
             };
 
             return res.data;
+
         } catch (error) {
+            console.error(error);
             notify.toastError("Không tải được danh sách đơn hàng");
+            orders.value = [];
             return null;
         }
     };
 
     const getOrder = async (id) => {
+        const notify = useNotify();
         try {
             const res = await axios.get(`${apiBase}/orders/${id}`, {
                 headers: authHeaders(),
@@ -72,6 +76,7 @@ export const useOrder = defineStore("order", () => {
         discount = 0,
         finalTotal = null
     ) => {
+        const notify = useNotify();
         try {
             const res = await axios.post(
                 `${apiBase}/orders`,
@@ -99,6 +104,7 @@ export const useOrder = defineStore("order", () => {
     };
 
     const updateOrder = async (id, data) => {
+        const notify = useNotify();
         try {
             const res = await axios.put(
                 `${apiBase}/orders/${id}`,
@@ -118,6 +124,7 @@ export const useOrder = defineStore("order", () => {
     };
 
     const cancelOrder = async (id, cancelReason = null) => {
+        const notify = useNotify();
         try {
             const res = await axios.patch(
                 `${apiBase}/orders/${id}/cancel`,

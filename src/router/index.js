@@ -110,6 +110,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
+      path: "/reviewadmin",
+      name: "reviewadmin",
+      component: ReviewAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
       path: "/attributeadmin",
       name: "attributeadmin",
       component: AttributeAdmin,
