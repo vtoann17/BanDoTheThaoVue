@@ -77,31 +77,34 @@ export const useAuth = defineStore("auth", () => {
   };
 
   const getUser = async () => {
-    if (user.value) return;           // đã có data rồi
-    if (_fetchingUser) return _fetchingUser; // đang fetch → chờ promise cũ
+  if (user.value) return;
+  if (_fetchingUser) return _fetchingUser;
 
-    const infor = localStorage.getItem("auth");
-    if (!infor) {
-      auth.value = null;
-      user.value = null;
-      return;
-    }
+  const infor = localStorage.getItem("auth");
+  if (!infor) {
+    auth.value = null;
+    user.value = null;
+    return;
+  }
 
-    const data = JSON.parse(infor);
-    auth.value = data;
-    axios.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
-    axios.defaults.headers.common["Accept"] = "application/json";
+  const data = JSON.parse(infor);
+  auth.value = data;
+  axios.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+  axios.defaults.headers.common["Accept"] = "application/json";
 
-    _fetchingUser = axios.get(`${apiBase}/getUser`)
-      .then(res => {
-        if (res.status === 200) user.value = res.data;
-        else logout();
-      })
-      .catch(() => logout())
-      .finally(() => { _fetchingUser = null; }); // ← reset sau khi xong
+  _fetchingUser = axios.get(`${apiBase}/getUser`)
+    .then(res => {
+      if (res.status === 200) user.value = res.data;
+    })
+    .catch((error) => {
+      if (error.response?.status === 401) {
+        logout();
+      }
+    })
+    .finally(() => { _fetchingUser = null; });
 
-    return _fetchingUser;
-  };
+  return _fetchingUser;
+};
 
   return { auth, user, register, login, logout, getUser, loginGoogle };
 });

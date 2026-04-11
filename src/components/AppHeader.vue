@@ -10,11 +10,9 @@ const cartStore = useCart();
 const showDropdown = ref(false);
 const dropdownRef = ref(null);
 
-onMounted(() => {
+onMounted(async () => {
   if (!authStore.user) {
-    authStore.getUser();
-  } else {
-    cartStore.loadCart();
+    await authStore.getUser()
   }
   document.addEventListener("click", closeOnOutside);
 });

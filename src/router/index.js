@@ -335,6 +335,11 @@ const router = createRouter({
       component: CouponEdit, // component bạn tạo
     },
     {
+      path: "/reviewadmin", // đường dẫn URL
+      name: "reviewadmin",
+      component: ReviewAdmin, // component bạn tạo
+    },
+    {
       path: "/auth/login", // đường dẫn URL
       name: "login",
       component: Login, // component bạn tạo
