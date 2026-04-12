@@ -11,22 +11,18 @@
           <p class="page-subtitle">Quản lý danh sách các sản phẩm bạn đã lưu để mua sau.</p>
         </div>
 
-        <div v-if="loading" class="loading-state">Đang tải danh sách...</div>
+        <div v-if="loading" class="state-msg">Đang tải danh sách yêu thích...</div>
 
-        <div v-else-if="favoriteProducts.length === 0" class="empty-state text-center py-10">
-          <p class="text-gray-500">Danh sách yêu thích của bạn đang trống.</p>
-          <router-link to="/products" class="text-blue-600 font-bold">Đi mua sắm ngay</router-link>
+        <div v-else-if="favoriteProducts.length === 0" class="empty-container">
+          <p>Danh sách của bạn đang trống.</p>
+          <router-link to="/products" class="btn-shop-now">Đi mua sắm ngay</router-link>
         </div>
 
         <div v-else class="favorite-grid">
           <div class="favorite-card" v-for="item in favoriteProducts" :key="item.id">
-
+            
             <button class="btn-heart active" @click="removeFavorite(item.product_id)">
-              <svg viewBox="0 0 24 24">
-                <path
-                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z">
-                </path>
-              </svg>
+              <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
             </button>
 
             <div class="fav-img-wrap">
@@ -38,10 +34,7 @@
               <div class="fav-meta">
                 <span class="fav-price">{{ fmt(item.product.price) }}</span>
                 <span class="fav-rating">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z">
-                    </path>
-                  </svg>
+                  <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path></svg>
                   {{ item.product.rating ?? '4.8' }}
                 </span>
               </div>
@@ -49,10 +42,8 @@
 
             <router-link :to="`/productdetail/${item.product.slug}`" class="btn-add-cart">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
               Xem chi tiết
             </router-link>
@@ -60,54 +51,55 @@
 
           <router-link to="/products" class="explore-card">
             <div class="explore-icon">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                </path>
-              </svg>
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
             <span class="explore-text">Khám phá thêm</span>
           </router-link>
         </div>
-
       </section>
     </main>
+
+    <footer class="footer">
+      <div class="footer-container">
+        <div class="footer-brand">
+          <div class="footer-logo">SG</div>
+          <span class="footer-name">SportGear</span>
+        </div>
+        <div class="footer-copy">© 2024 SportGear. Bản quyền thuộc về Công ty TNHH Thể Thao Việt.</div>
+        <div class="footer-links">
+          <a href="#">Điều khoản</a> <a href="#">Bảo mật</a> <a href="#">Hỗ trợ</a>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import { storeToRefs } from "pinia";
+import { useAuthStore } from "@/stores/auth";
+import { useNotify } from "@/composables/useNotify";
 import HeaderUser from '../../components/HeaderUser.vue';
 import SidebarUser from '../../components/SidebarUser.vue';
-import { useNotify } from "@/composables/useNotify";
 
-// Khởi tạo thông báo
-const { toastSuccess, toastError, toastInfo } = useNotify();
+const authStore = useAuthStore();
+const { user, auth } = storeToRefs(authStore);
+const {toastError, toastInfo } = useNotify();
 
-// State
 const favoriteProducts = ref([]);
 const activeLink = ref('favorites');
-const user = ref({ name: 'Hoàng Anh' });
 const loading = ref(true);
-
-// Lấy Base URL (ví dụ: http://127.0.0.1:8000)
 const baseUrl = import.meta.env.VITE_API_BASE.replace("/api", "");
 
-// Hàm lấy Token từ object "auth" như bạn đã lưu
-const getToken = () => {
-  const authData = localStorage.getItem("auth");
-  return authData ? JSON.parse(authData).token : null;
-};
-
-// 1. Load danh sách yêu thích từ Database
 const fetchFavorites = async () => {
-  const token = getToken();
+  const token = auth.value?.token;
+
   if (!token) {
-    toastError("Vui lòng đăng nhập để xem danh sách!");
+    toastError("Vui lòng đăng nhập để xem danh sách yêu thích!");
+    loading.value = false;
     return;
   }
 
-  loading.value = true;
   try {
     const res = await fetch(`${import.meta.env.VITE_API_BASE}/favourites`, {
       headers: {
@@ -118,19 +110,18 @@ const fetchFavorites = async () => {
 
     if (res.ok) {
       favoriteProducts.value = await res.json();
-    } else {
-      toastError("Không thể lấy dữ liệu từ server");
+    } else if (res.status === 401) {
+      toastError("Phiên đăng nhập hết hạn!");
     }
   } catch (err) {
-    toastError("Lỗi kết nối API");
+    toastError("Lỗi kết nối máy chủ API");
   } finally {
     loading.value = false;
   }
 };
 
-// 2. Xóa khỏi danh sách yêu thích (Khi bấm vào nút trái tim ở trang này)
 const removeFavorite = async (productId) => {
-  const token = getToken();
+  const token = auth.value?.token;
   try {
     const res = await fetch(`${import.meta.env.VITE_API_BASE}/favourites/${productId}`, {
       method: "DELETE",
@@ -138,12 +129,11 @@ const removeFavorite = async (productId) => {
     });
 
     if (res.ok) {
-      // Cập nhật UI ngay lập tức bằng cách lọc bỏ sản phẩm vừa xóa
       favoriteProducts.value = favoriteProducts.value.filter(item => item.product_id !== productId);
       toastInfo("Đã xóa khỏi danh sách yêu thích");
     }
   } catch (err) {
-    toastError("Lỗi khi xóa sản phẩm");
+    toastError("Không thể xóa sản phẩm lúc này");
   }
 };
 
@@ -513,6 +503,7 @@ button {
   color: #111827;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   height: 40px;
