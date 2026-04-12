@@ -77,12 +77,12 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { storeToRefs } from "pinia";
-import { useAuthStore } from "@/stores/auth";
+import { useAuth} from "@/stores/auth";
 import { useNotify } from "@/composables/useNotify";
 import HeaderUser from '../../components/HeaderUser.vue';
 import SidebarUser from '../../components/SidebarUser.vue';
 
-const authStore = useAuthStore();
+const authStore = useAuth();
 const { user, auth } = storeToRefs(authStore);
 const {toastError, toastInfo } = useNotify();
 

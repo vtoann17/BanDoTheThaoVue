@@ -123,7 +123,7 @@ const closeOnOutside = (e) => {
             <div class="dropdown-divider" />
 
             <template v-if="authStore.user.role === 'admin'">
-              <a href="/dashboar" class="dropdown-item">
+              <a href="/dashboard" class="dropdown-item">
                 <i class="bi bi-speedometer2"></i>
                 Quản lý
               </a>
