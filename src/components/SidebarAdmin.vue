@@ -26,7 +26,7 @@
         <i class="bi bi-house"></i> Trang chủ
       </router-link>
 
-      <router-link to="/dashboar" class="nav-item">
+      <router-link to="/dashboard" class="nav-item">
         <i class="bi bi-speedometer2"></i> Tổng quan
       </router-link>
 
