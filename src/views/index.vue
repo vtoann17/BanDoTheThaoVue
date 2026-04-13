@@ -6,6 +6,7 @@ import CategoryList from '../components/CategoryList.vue'
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
+import AIChatbot from "@/components/Aichatbot.vue";
 
 const sports = [
   { name: 'Chạy bộ', desc: 'Bền bỉ trên mọi cung đường.',    img: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=800&q=80' },
@@ -77,6 +78,7 @@ onMounted(() => {
   </section>
 
   <AppFooter/>
+  <AIChatbot />
 </template>
 
 <style scoped>
