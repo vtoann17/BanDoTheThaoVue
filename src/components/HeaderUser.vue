@@ -1,3 +1,27 @@
+<script setup>
+import { onMounted, watch } from "vue";
+import { useAuth } from '@/stores/auth';
+import { useCart } from '@/stores/carts';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+const authStore = useAuth();
+const cartStore = useCart();
+const { user } = authStore;
+
+onMounted(() => {
+  if (!authStore.user) {
+    authStore.getUser();
+  } else {
+    cartStore.loadCart();
+  }
+});
+
+watch(() => authStore.user, (newUser, oldUser) => {
+  if (newUser && !oldUser) cartStore.loadCart();
+});
+</script>
+
 <template>
   <header class="header">
     <div class="header-container">
@@ -19,37 +43,33 @@
       </div>
 
       <div class="header-actions">
-        <button class="cart-btn">
+        <!-- Giỏ hàng -->
+        <button class="cart-btn" @click="router.push('/cart')">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
           </svg>
-          <span class="cart-badge">{{ cartCount }}</span>
+          <span class="cart-badge" v-if="cartStore.totalItems > 0">
+            {{ cartStore.totalItems > 99 ? '99+' : cartStore.totalItems }}
+          </span>
         </button>
 
-        <div class="user-menu">
+        <!-- User info -->
+        <div class="user-menu" v-if="authStore.user">
           <div class="user-text">
-            <span class="user-name">{{ user.name }}</span>
-            <span class="user-tier">{{ user.tier }}</span>
+            <span class="user-name">{{ authStore.user.name }}</span>
+            <span class="user-tier">{{ authStore.user.role === 'admin' ? 'Quản trị viên' : 'Khách hàng' }}</span>
           </div>
-          <img :src="user.avatar" :alt="user.name" class="user-avatar" />
+          <div v-if="authStore.user.avatar" >
+            <img :src="authStore.user.avatar" :alt="authStore.user.name" class="user-avatar" />
+          </div>
+          <div v-else class="avatar-fallback">
+            {{ authStore.user.name.charAt(0).toUpperCase() }}
+          </div>
         </div>
       </div>
     </div>
   </header>
 </template>
-
-<script setup>
-import { useAuth } from '@/stores/auth';
-
-defineProps({
-  cartCount: {
-    type: Number,
-    default: 0,
-  },
-});
-
-const { user } = useAuth();
-</script>
 
 <style scoped>
 .header {
@@ -181,4 +201,17 @@ const { user } = useAuth();
 .user-name { font-size: 14px; font-weight: 600; color: #111827; }
 .user-tier { font-size: 12px; color: #9ca3af; }
 .user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.avatar-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1565c0, #1e88e5);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 </style>

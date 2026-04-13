@@ -10,18 +10,19 @@ const cartStore = useCart();
 const showDropdown = ref(false);
 const dropdownRef = ref(null);
 
-onMounted(() => {
+onMounted(async () => {
   if (!authStore.user) {
-    authStore.getUser();
-  } else {
-    cartStore.loadCart();
+    await authStore.getUser()
   }
   document.addEventListener("click", closeOnOutside);
 });
 
-watch(() => authStore.user, (user, oldUser) => {
-  if (user && !oldUser) cartStore.loadCart(); 
-});
+watch(
+  () => authStore.user,
+  (user, oldUser) => {
+    if (user && !oldUser) cartStore.loadCart();
+  }
+);
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", closeOnOutside);
@@ -122,9 +123,13 @@ const closeOnOutside = (e) => {
             <div class="dropdown-divider" />
 
             <template v-if="authStore.user.role === 'admin'">
-              <a href="/dashboar" class="dropdown-item">
+              <a href="/dashboard" class="dropdown-item">
                 <i class="bi bi-speedometer2"></i>
                 Quản lý
+              </a>
+              <a href="/order" class="dropdown-item">
+                <i class="bi bi-receipt"></i>
+                Đơn hàng của tôi
               </a>
             </template>
             <template v-else>

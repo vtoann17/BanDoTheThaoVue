@@ -24,7 +24,7 @@ import AttributeValueEdit from '@/views/admin/attributevalues/AttributeValueEdit
 import VariantAdmin from '@/views/admin/variants/VariantAdmin.vue'
 import VariantAdd from '@/views/admin/variants/VariantAdd.vue'
 import VariantEdit from '@/views/admin/variants/VariantEdit.vue'
-import Dashboar from '@/views/admin/Dashboar.vue'
+import Dashboard from '@/views/admin/Dashboard.vue'
 import CategoryAdmin from '@/views/admin/categories/CategoryAdmin.vue'
 import CategoryAdd from '@/views/admin/categories/CategoryAdd.vue'
 import CategoryEdit from "@/views/admin/categories/CategoryEdit.vue"
@@ -112,6 +112,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
+      path: "/reviewadmin",
+      name: "reviewadmin",
+      component: ReviewAdmin,
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
       path: "/attributeadmin",
       name: "attributeadmin",
       component: AttributeAdmin,
@@ -166,9 +172,9 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: "/dashboar",
-      name: "dashboar",
-      component: Dashboar,
+      path: "/dashboard",
+      name: "dashboard",
+      component: Dashboard,
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     

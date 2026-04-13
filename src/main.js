@@ -24,6 +24,16 @@ if (token) {
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 }
 
+const savedAuth = localStorage.getItem('auth')
+if (savedAuth) {
+  try {
+    const { token } = JSON.parse(savedAuth)
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      axios.defaults.headers.common['Accept'] = 'application/json'
+    }
+  } catch {}
+}
 const app = createApp(App)
 
 app.use(createPinia())
