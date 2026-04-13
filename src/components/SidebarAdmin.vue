@@ -103,6 +103,9 @@
         <i class="bi bi-star-fill"></i>
         Đánh giá
       </router-link>
+      <router-link to="/admin/contacts" class="nav-item">
+  Liên hệ
+</router-link>
     </nav>
 
     <div class="sidebar-footer">

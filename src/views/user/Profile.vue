@@ -1,6 +1,90 @@
+<script setup>
+import { ref, reactive, onMounted, computed } from 'vue';
+import HeaderUser from '../../components/HeaderUser.vue';
+import SidebarUser from '../../components/SidebarUser.vue';
+import { useUsers } from '@/stores/users'; // Đảm bảo đúng đường dẫn đến file users.js của bạn
+
+const userStore = useUsers();
+const activeLink = ref('Thông tin cá nhân');
+
+// Thông tin người dùng hiện tại (để truyền vào Header)
+const currentUser = ref({
+  name: '',
+  avatar: '',
+  role: ''
+});
+
+// Form chứa dữ liệu để chỉnh sửa
+const form = reactive({
+  name: '',
+  email: '',
+  role: '',
+  avatarFile: null
+});
+
+// Preview ảnh trước khi lưu
+const avatarPreview = ref('');
+
+// Lấy ID và thông tin ban đầu từ localStorage
+const getAuthData = () => {
+  const auth = localStorage.getItem("auth");
+  return auth ? JSON.parse(auth) : null;
+};
+
+// Hàm xử lý hiển thị URL ảnh từ server
+const getAvatarUrl = (path) => {
+  if (!path) return 'https://via.placeholder.com/150';
+  if (path.startsWith('http')) return path;
+  // Giả định backend của bạn chạy ở cổng 8000 và ảnh lưu trong storage public
+  return `${import.meta.env.VITE_API_BASE.replace('/api', '')}/storage/${path}`;
+};
+
+onMounted(async () => {
+  const authData = getAuthData();
+  if (authData && authData.user) {
+    const userData = await userStore.getUserById(authData.user.id); // Gọi API lấy data mới nhất
+    if (userData) {
+      currentUser.value = userData;
+      form.name = userData.name;
+      form.email = userData.email;
+      form.role = userData.role;
+      avatarPreview.value = getAvatarUrl(userData.avatar);
+    }
+  }
+});
+
+// Xử lý khi chọn file ảnh mới
+const handleFileChange = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    form.avatarFile = file;
+    avatarPreview.value = URL.createObjectURL(file); // Hiển thị ảnh tạm thời
+  }
+};
+
+// Gọi API cập nhật thông tin
+const handleSave = async () => {
+  const authData = getAuthData();
+  if (!authData) return;
+
+  const formData = new FormData();
+  formData.append('name', form.name);
+  formData.append('email', form.email);
+  formData.append('role', form.role);
+  if (form.avatarFile) {
+    formData.append('avatar', form.avatarFile); //
+  }
+
+  const result = await userStore.updateUser(authData.user.id, formData); //
+  if (result) {
+    // Cập nhật lại giao diện sau khi thành công
+    currentUser.value = result;
+  }
+};
+</script>
 <template>
   <div class="profile-page">
-    <HeaderUser :cart-count="3" :user="user" />
+    <HeaderUser :cart-count="3" :user="currentUser" />
 
     <main class="main-wrapper">
       <SidebarUser :active-link="activeLink" @navigate="activeLink = $event" />
@@ -9,135 +93,67 @@
         <div class="card form-card">
           <div class="card-header">
             <h1 class="page-title">Thông tin cá nhân</h1>
-            <p class="page-subtitle">Cập nhật thông tin của bạn để có trải nghiệm mua sắm tốt hơn.</p>
+            <p class="page-subtitle">Cập nhật thông tin của bạn để quản lý tài khoản tốt hơn.</p>
           </div>
 
           <div class="card-body">
             <div class="avatar-section">
               <div class="avatar-circle">
-                <img :src="user.avatar" alt="Avatar" class="avatar-img" />
-                <button class="camera-btn">
+                <img :src="avatarPreview" alt="Avatar" class="avatar-img" />
+                <label for="file-upload" class="camera-btn">
                   <svg fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.828-.414l-.828-1.242A1 1 0 0012.93 3H7.07a1 1 0 00-.828.414L5.414 4.586A1 1 0 014.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
                   </svg>
-                </button>
+                </label>
+                <input id="file-upload" type="file" @change="handleFileChange" hidden accept="image/*" />
               </div>
               <div class="avatar-info">
-                <button class="btn-change-avatar">Thay đổi ảnh</button>
-                <p class="upload-hint">Định dạng JPG, PNG hoặc GIF. Dung lượng tối đa 1MB.</p>
+                <label for="file-upload" class="btn-change-avatar" style="cursor: pointer; display: inline-block;">
+                  Thay đổi ảnh
+                </label>
+                <p class="upload-hint">Định dạng JPG, PNG hoặc GIF. Dung lượng tối đa 2MB.</p>
               </div>
             </div>
 
             <div class="form-grid">
               <div class="form-group">
                 <label>Họ và tên</label>
-                <input type="text" class="form-input" v-model="form.fullName" />
+                <input type="text" class="form-input" v-model="form.name" placeholder="Nhập họ tên" />
               </div>
               <div class="form-group">
                 <label>Email</label>
                 <input type="email" class="form-input disabled-input" v-model="form.email" disabled />
               </div>
-              <div class="form-group">
-                <label>Số điện thoại</label>
-                <input type="tel" class="form-input" v-model="form.phone" />
-              </div>
-              <div class="form-group">
-                <label>Ngày sinh</label>
-                <div class="input-icon-wrapper">
-                  <input type="text" class="form-input" v-model="form.dob" />
-                  <svg class="icon-calendar" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                  </svg>
-                </div>
-              </div>
             </div>
 
             <div class="form-group margin-top-24">
-              <label>Giới tính</label>
+              <label>Vai trò hệ thống</label>
               <div class="radio-group">
                 <label class="radio-label">
-                  <input type="radio" name="gender" value="nam" v-model="form.gender" />
-                  <span class="radio-mark"></span>
-                  Nam
+                  <input type="radio" value="user" v-model="form.role" disabled />
+                  <span class="radio-mark"></span> Người dùng
                 </label>
                 <label class="radio-label">
-                  <input type="radio" name="gender" value="nu" v-model="form.gender" />
-                  <span class="radio-mark"></span>
-                  Nữ
+                  <input type="radio" value="staff" v-model="form.role" disabled />
+                  <span class="radio-mark"></span> Nhân viên
                 </label>
                 <label class="radio-label">
-                  <input type="radio" name="gender" value="khac" v-model="form.gender" />
-                  <span class="radio-mark"></span>
-                  Khác
+                  <input type="radio" value="admin" v-model="form.role" disabled />
+                  <span class="radio-mark"></span> Quản trị viên
                 </label>
               </div>
+              <p class="upload-hint" style="margin-top: 8px;">(Vai trò do hệ thống chỉ định, không thể thay đổi)</p>
             </div>
 
             <div class="form-actions">
-              <button class="btn-save">Lưu thay đổi</button>
+              <button class="btn-save" @click="handleSave">Lưu thay đổi</button>
             </div>
-          </div>
-        </div>
-
-        <div class="security-banner">
-          <div class="shield-box">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-            </svg>
-          </div>
-          <div class="security-text">
-            <h4>Bảo mật tài khoản</h4>
-            <p>Tài khoản của bạn đã được xác minh 100%.</p>
           </div>
         </div>
       </section>
     </main>
-
-    <footer class="footer">
-      <div class="footer-container">
-        <div class="footer-brand">
-          <div class="footer-logo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M5.636 5.636a9 9 0 0112.728 0M12 2v20M2 12h20M5.636 18.364a9 9 0 0112.728 0"></path>
-            </svg>
-          </div>
-          <span class="footer-name">SportGear</span>
-        </div>
-        <div class="footer-copy">
-          © 2024 SportGear. Bản quyền thuộc về Công ty TNHH Thể Thao Việt.
-        </div>
-        <div class="footer-links">
-          <a href="#">Điều khoản</a>
-          <a href="#">Bảo mật</a>
-          <a href="#">Hỗ trợ</a>
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
-
-<script setup>
-import { ref, reactive } from 'vue';
-import HeaderUser from '../../components/HeaderUser.vue'
-import SidebarUser from '../../components/SidebarUser.vue'
-
-const activeLink = ref('Thông tin cá nhân');
-
-const user = {
-  name: 'Nguyễn Minh',
-  tier: 'Thành viên Bạc',
-  avatar: 'https://i.pravatar.cc/150?img=5',
-};
-
-const form = reactive({
-  fullName: 'Nguyễn Minh',
-  email: 'minh.nguyen@example.com',
-  phone: '0901 234 567',
-  dob: '10 / 15 / 1995',
-  gender: 'nam',
-});
-</script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -152,7 +168,6 @@ const form = reactive({
   display: flex;
   flex-direction: column;
 }
-
 a { text-decoration: none; }
 button { font-family: inherit; }
 
@@ -307,7 +322,7 @@ button { font-family: inherit; }
 }
 
 .radio-label input[type="radio"]:checked + .radio-mark {
-  border-color: #1a73e8;
+border-color: #1a73e8;
   background-color: #1a73e8;
 }
 

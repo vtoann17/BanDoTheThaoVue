@@ -53,6 +53,8 @@ import CouponAdmin from '@/views/admin/coupon/CouponAdmin.vue'
 import CouponAdd from '@/views/admin/coupon/CouponAdd.vue'
 import CouponEdit from '@/views/admin/coupon/CouponEdit.vue'
 import ReviewAdmin from '@/views/admin/reviews/ReviewAdmin.vue'
+import ContactPage from '@/views/ContactPage.vue'
+import AdminContactPage from '@/views/admin/contactpage/AdminContactPage.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -377,6 +379,17 @@ const router = createRouter({
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue'),
     },
+    {
+    path: '/contact',
+    name: 'contact',
+    component: ContactPage,
+  },
+  {
+    path: '/admin/contacts',
+    name: 'admin-contacts',
+    component: AdminContactPage,
+    meta: { requiresAuth: true }
+  },
   ],
 })
 
