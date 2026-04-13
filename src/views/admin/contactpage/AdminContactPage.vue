@@ -13,10 +13,10 @@
         <a class="nav-item active" href="#">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           Quản lý liên hệ
-          <span class="badge" v-if="stats.pending > 0">{{ stats.pending }}</span>
+          <span class="badge" v-if="store.pendingCount > 0">{{ store.pendingCount }}</span>
         </a>
         <a class="nav-item" href="/admin/customers">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
           Khách hàng
         </a>
         <a class="nav-item" href="/admin/reports">
@@ -36,10 +36,14 @@
         <div class="topbar-right">
           <div class="search-bar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input v-model="searchQuery" type="text" placeholder="Tìm kiếm..." @input="debouncedSearch" />
+            <input v-model="store.searchQuery" type="text" placeholder="Tìm kiếm..." @input="debouncedSearch" />
           </div>
-          <button class="refresh-btn" @click="loadContacts" :disabled="loading" title="Làm mới">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" :class="{ spinning: loading }"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          <button class="refresh-btn" @click="store.loadContacts" :disabled="store.loading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"
+              :class="{ spinning: store.loading }">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
           </button>
           <div class="admin-avatar">AD</div>
         </div>
@@ -49,22 +53,22 @@
       <div class="stats-row">
         <div class="stat-card">
           <span class="stat-label">Tổng liên hệ</span>
-          <span class="stat-num">{{ stats.total }}</span>
-          <span class="stat-sub">+{{ stats.today }} hôm nay</span>
+          <span class="stat-num">{{ store.stats.total }}</span>
+          <span class="stat-sub">+{{ store.stats.today }} hôm nay</span>
         </div>
         <div class="stat-card">
           <span class="stat-label">Chờ xử lý</span>
-          <span class="stat-num pending">{{ stats.pending }}</span>
+          <span class="stat-num pending">{{ store.stats.pending }}</span>
           <span class="stat-sub">Cần phản hồi</span>
         </div>
         <div class="stat-card">
           <span class="stat-label">Đã xử lý</span>
-          <span class="stat-num done">{{ stats.resolved }}</span>
+          <span class="stat-num done">{{ store.stats.resolved }}</span>
           <span class="stat-sub">Hoàn thành</span>
         </div>
         <div class="stat-card">
           <span class="stat-label">Chat đang mở</span>
-          <span class="stat-num chat">{{ stats.chat_active }}</span>
+          <span class="stat-num chat">{{ store.stats.chat_active }}</span>
           <span class="stat-sub">Đang diễn ra</span>
         </div>
       </div>
@@ -72,16 +76,21 @@
       <!-- Controls -->
       <div class="controls-bar">
         <div class="tabs">
-          <button v-for="tab in tabs" :key="tab.key" class="tab-btn" :class="{ active: activeTab === tab.key }" @click="setTab(tab.key)">{{ tab.label }}</button>
+          <button
+            v-for="tab in tabs" :key="tab.key"
+            class="tab-btn"
+            :class="{ active: store.activeTab === tab.key }"
+            @click="store.setTab(tab.key)"
+          >{{ tab.label }}</button>
         </div>
         <div class="filters">
-          <select v-model="filterStatus" class="filter-select" @change="loadContacts">
+          <select v-model="store.filterStatus" class="filter-select" @change="store.loadContacts">
             <option value="">Tất cả trạng thái</option>
             <option value="pending">Chờ xử lý</option>
             <option value="in_progress">Đang xử lý</option>
             <option value="resolved">Đã giải quyết</option>
           </select>
-          <select v-model="filterTopic" class="filter-select" @change="loadContacts">
+          <select v-model="store.filterTopic" class="filter-select" @change="store.loadContacts">
             <option value="">Tất cả chủ đề</option>
             <option value="order">Đơn hàng</option>
             <option value="product">Sản phẩm</option>
@@ -96,15 +105,16 @@
       <div class="panel-layout">
         <!-- Danh sách -->
         <div class="contact-list">
-          <div v-if="loading && contacts.length === 0" class="loading-state">
+          <div v-if="store.loading && store.contacts.length === 0" class="loading-state">
             <div class="spinner-lg"></div>
             <p>Đang tải...</p>
           </div>
 
-          <div v-for="c in contacts" :key="c.id"
+          <div
+            v-for="c in store.contacts" :key="c.id"
             class="contact-item"
-            :class="{ selected: selectedContact?.id === c.id, unread: !c.is_read }"
-            @click="selectContact(c)"
+            :class="{ selected: store.selectedContact?.id === c.id, unread: !c.is_read }"
+            @click="store.selectContact(c)"
           >
             <div class="contact-avatar" :style="avatarStyle(c.name)">{{ c.initials }}</div>
             <div class="contact-preview">
@@ -120,76 +130,89 @@
             </div>
           </div>
 
-          <div v-if="!loading && contacts.length === 0" class="empty-state">
+          <div v-if="!store.loading && store.contacts.length === 0" class="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
             <p>Không có liên hệ nào</p>
           </div>
 
-          <!-- Pagination -->
-          <div v-if="meta.last_page > 1" class="pagination">
-            <button :disabled="meta.current_page === 1" @click="changePage(meta.current_page - 1)">←</button>
-            <span>{{ meta.current_page }} / {{ meta.last_page }}</span>
-            <button :disabled="meta.current_page === meta.last_page" @click="changePage(meta.current_page + 1)">→</button>
+          <div v-if="store.meta.last_page > 1" class="pagination">
+            <button :disabled="store.meta.current_page === 1" @click="store.changePage(store.meta.current_page - 1)">←</button>
+            <span>{{ store.meta.current_page }} / {{ store.meta.last_page }}</span>
+            <button :disabled="store.meta.current_page === store.meta.last_page" @click="store.changePage(store.meta.current_page + 1)">→</button>
           </div>
         </div>
 
         <!-- Chi tiết -->
         <div class="contact-detail">
-          <div v-if="!selectedContact" class="detail-empty">
+          <div v-if="!store.selectedContact" class="detail-empty">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
             <p>Chọn một liên hệ để xem chi tiết</p>
           </div>
 
-          <template v-else-if="detailLoading">
-            <div class="detail-loading"><div class="spinner-lg"></div></div>
-          </template>
+          <div v-else-if="store.detailLoading" class="detail-loading">
+            <div class="spinner-lg"></div>
+          </div>
 
           <template v-else>
             <!-- Header -->
             <div class="detail-header">
               <div class="detail-user">
-                <div class="detail-avatar" :style="avatarStyle(selectedContact.name)">{{ selectedContact.initials }}</div>
+                <div class="detail-avatar" :style="avatarStyle(store.selectedContact.name)">
+                  {{ store.selectedContact.initials }}
+                </div>
                 <div>
-                  <h3>{{ selectedContact.name }}</h3>
-                  <span class="detail-email">{{ selectedContact.email }}</span>
+                  <h3>{{ store.selectedContact.name }}</h3>
+                  <span class="detail-email">{{ store.selectedContact.email }}</span>
                 </div>
               </div>
               <div class="detail-actions">
-                <select v-model="selectedContact.status" class="status-select" :class="selectedContact.status" @change="changeStatus">
+                <select
+                  :value="store.selectedContact.status"
+                  class="status-select"
+                  :class="store.selectedContact.status"
+                  @change="store.updateStatus($event.target.value)"
+                >
                   <option value="pending">Chờ xử lý</option>
                   <option value="in_progress">Đang xử lý</option>
                   <option value="resolved">Đã giải quyết</option>
                 </select>
-                <button class="action-btn danger-btn" @click="deleteContact" title="Xóa">
+                <button class="action-btn danger-btn" @click="store.deleteContact">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                 </button>
               </div>
             </div>
 
-            <!-- Info -->
+            <!-- Info grid -->
             <div class="info-grid">
-              <div class="info-item"><span class="info-key">Điện thoại</span><span class="info-val">{{ selectedContact.phone || '—' }}</span></div>
-              <div class="info-item"><span class="info-key">Chủ đề</span><span class="info-val">{{ selectedContact.topic_label }}</span></div>
-              <div class="info-item"><span class="info-key">Ngày gửi</span><span class="info-val">{{ selectedContact.created_at }}</span></div>
-              <div class="info-item"><span class="info-key">Loại</span><span class="info-val">{{ selectedContact.type === 'form' ? 'Form liên hệ' : 'Chat trực tuyến' }}</span></div>
+              <div class="info-item"><span class="info-key">Điện thoại</span><span class="info-val">{{ store.selectedContact.phone || "—" }}</span></div>
+              <div class="info-item"><span class="info-key">Chủ đề</span><span class="info-val">{{ store.selectedContact.topic_label }}</span></div>
+              <div class="info-item"><span class="info-key">Ngày gửi</span><span class="info-val">{{ store.selectedContact.created_at }}</span></div>
+              <div class="info-item"><span class="info-key">Loại</span><span class="info-val">{{ store.selectedContact.type === "form" ? "Form liên hệ" : "Chat trực tuyến" }}</span></div>
             </div>
 
             <!-- Nội dung gốc -->
             <div class="original-msg">
               <h4>Nội dung gốc</h4>
-              <p>{{ selectedContact.message }}</p>
+              <p>{{ store.selectedContact.message }}</p>
             </div>
 
             <!-- Thread -->
             <div class="chat-thread">
-              <h4>Lịch sử hội thoại <span class="msg-count">({{ selectedContact.chat_messages?.length || 0 }} tin nhắn)</span></h4>
+              <h4>
+                Lịch sử hội thoại
+                <span class="msg-count">({{ store.selectedContact.chat_messages?.length || 0 }} tin nhắn)</span>
+              </h4>
               <div class="thread-messages" ref="threadRef">
-                <div v-if="!selectedContact.chat_messages || selectedContact.chat_messages.length === 0" class="no-thread">
-                  Chưa có tin nhắn nào trong hội thoại này.
+                <div v-if="!store.selectedContact.chat_messages?.length" class="no-thread">
+                  Chưa có tin nhắn nào.
                 </div>
-                <div v-for="msg in selectedContact.chat_messages" :key="msg.id" class="thread-msg" :class="msg.sender === 'admin' ? 'from-admin' : 'from-customer'">
+                <div
+                  v-for="msg in store.selectedContact.chat_messages" :key="msg.id"
+                  class="thread-msg"
+                  :class="msg.sender === 'admin' ? 'from-admin' : 'from-customer'"
+                >
                   <div class="thread-avatar" :class="msg.sender">
-                    {{ msg.sender === 'admin' ? 'AD' : selectedContact.initials }}
+                    {{ msg.sender === "admin" ? "AD" : store.selectedContact.initials }}
                   </div>
                   <div class="thread-bubble">
                     <div class="thread-meta">
@@ -201,32 +224,32 @@
                 </div>
               </div>
 
-              <!-- Reply box -->
+              <!-- Reply -->
               <div class="reply-box">
                 <div class="reply-header">
                   <span>Trả lời khách hàng</span>
                   <div class="quick-replies">
-                    <button v-for="qr in quickReplies" :key="qr" class="quick-reply-btn" @click="replyText = qr">{{ qr }}</button>
+                    <button
+                      v-for="qr in quickReplies" :key="qr"
+                      class="quick-reply-btn"
+                      @click="store.replyText = qr"
+                    >{{ qr }}</button>
                   </div>
                 </div>
-                <textarea v-model="replyText" rows="3" placeholder="Nhập nội dung trả lời..."></textarea>
-
-                <div v-if="replyError" class="reply-error">{{ replyError }}</div>
-                <div v-if="replySuccess" class="reply-success">{{ replySuccess }}</div>
-
+                <textarea v-model="store.replyText" rows="3" placeholder="Nhập nội dung trả lời..."></textarea>
                 <div class="reply-footer">
                   <div class="reply-options">
                     <label class="checkbox-label">
-                      <input type="checkbox" v-model="sendEmail" /> Gửi email thông báo
+                      <input type="checkbox" v-model="store.sendEmail" /> Gửi email thông báo
                     </label>
                     <label class="checkbox-label">
-                      <input type="checkbox" v-model="markResolved" /> Đánh dấu đã giải quyết
+                      <input type="checkbox" v-model="store.markResolved" /> Đánh dấu đã giải quyết
                     </label>
                   </div>
-                  <button class="reply-btn" @click="sendReply" :disabled="!replyText.trim() || replying">
-                    <span class="spinner" v-if="replying" style="border-color:rgba(255,255,255,.3);border-top-color:#fff;width:12px;height:12px;border-width:2px;"></span>
+                  <button class="reply-btn" @click="onSendReply" :disabled="!store.replyText.trim() || store.replying">
+                    <span v-if="store.replying" class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:#fff;width:12px;height:12px;border-width:2px;"></span>
                     <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    {{ replying ? 'Đang gửi...' : 'Gửi phản hồi' }}
+                    {{ store.replying ? "Đang gửi..." : "Gửi phản hồi" }}
                   </button>
                 </div>
               </div>
@@ -238,224 +261,84 @@
   </div>
 </template>
 
-<script>
-import axios from 'axios'
+<script setup>
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
+import { useAdminContactStore } from "@/stores/useAdminContactStore";
 
-const API = import.meta.env.VITE_API_URL || '/api'
-const ADMIN_API = `${API}/admin`
+const store = useAdminContactStore();
+const threadRef = ref(null);
+let searchTimer  = null;
+let statsInterval = null;
+
+const tabs = [
+  { key: "all",  label: "Tất cả" },
+  { key: "form", label: "Form liên hệ" },
+  { key: "chat", label: "Chat trực tuyến" },
+];
+
+const quickReplies = [
+  "Xin chào! Tôi có thể giúp gì cho bạn?",
+  "Chúng tôi đã nhận được yêu cầu của bạn.",
+  "Cảm ơn bạn đã liên hệ!",
+];
 
 const AVATAR_COLORS = [
-  { bg: '#dbeafe', color: '#1d4ed8' },
-  { bg: '#fce7f3', color: '#be185d' },
-  { bg: '#d1fae5', color: '#065f46' },
-  { bg: '#fef3c7', color: '#92400e' },
-  { bg: '#ede9fe', color: '#5b21b6' },
-  { bg: '#fee2e2', color: '#991b1b' },
-]
+  { bg: "#dbeafe", color: "#1d4ed8" },
+  { bg: "#fce7f3", color: "#be185d" },
+  { bg: "#d1fae5", color: "#065f46" },
+  { bg: "#fef3c7", color: "#92400e" },
+  { bg: "#ede9fe", color: "#5b21b6" },
+  { bg: "#fee2e2", color: "#991b1b" },
+];
 
-export default {
-  name: 'AdminContactPage',
-  data() {
-    return {
-      contacts: [],
-      selectedContact: null,
-      loading: false,
-      detailLoading: false,
-      meta: { total: 0, per_page: 20, current_page: 1, last_page: 1 },
-      stats: { total: 0, pending: 0, in_progress: 0, resolved: 0, unread: 0, chat_active: 0, today: 0 },
+const avatarStyle = (name) => {
+  const idx = (name?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[idx];
+};
 
-      activeTab: 'all',
-      filterStatus: '',
-      filterTopic: '',
-      searchQuery: '',
-      searchTimer: null,
+const debouncedSearch = () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    store.meta.current_page = 1;
+    store.loadContacts();
+  }, 400);
+};
 
-      tabs: [
-        { key: 'all',  label: 'Tất cả' },
-        { key: 'form', label: 'Form liên hệ' },
-        { key: 'chat', label: 'Chat trực tuyến' },
-      ],
+const onSendReply = async () => {
+  const ok = await store.sendReply();
+  if (ok) nextTick(scrollThread);
+};
 
-      replyText: '',
-      sendEmail: true,
-      markResolved: false,
-      replying: false,
-      replyError: '',
-      replySuccess: '',
+const scrollThread = () => {
+  if (threadRef.value) threadRef.value.scrollTop = threadRef.value.scrollHeight;
+};
 
-      quickReplies: ['Xin chào! Tôi có thể giúp gì cho bạn?', 'Chúng tôi đã nhận được yêu cầu.', 'Cảm ơn bạn đã liên hệ!'],
+// Cuộn xuống cuối mỗi khi thread thêm tin mới
+watch(
+  () => store.selectedContact?.chat_messages?.length,
+  () => nextTick(scrollThread)
+);
 
-      pollInterval: null,
-    }
-  },
-  mounted() {
-    this.loadContacts()
-    // Auto-refresh stats mỗi 30 giây
-    this.pollInterval = setInterval(this.loadStats, 30000)
-  },
-  beforeUnmount() {
-    if (this.pollInterval) clearInterval(this.pollInterval)
-  },
-  methods: {
-    avatarStyle(name) {
-      const idx = name.charCodeAt(0) % AVATAR_COLORS.length
-      return { background: AVATAR_COLORS[idx].bg, color: AVATAR_COLORS[idx].color }
-    },
+onMounted(() => {
+  store.loadContacts();
+  statsInterval = setInterval(store.loadStats, 30000);
+});
 
-    // ─── Load dữ liệu ───────────────────────────────────
-    async loadContacts() {
-      this.loading = true
-      try {
-        const params = {
-          page: this.meta.current_page,
-          per_page: this.meta.per_page,
-        }
-        if (this.activeTab !== 'all') params.type = this.activeTab
-        if (this.filterStatus) params.status = this.filterStatus
-        if (this.filterTopic) params.topic = this.filterTopic
-        if (this.searchQuery) params.search = this.searchQuery
-
-        const { data } = await axios.get(`${ADMIN_API}/contacts`, { params })
-        this.contacts = data.data
-        this.meta    = data.meta
-        this.stats   = data.stats
-      } catch (err) {
-        console.error('Lỗi tải danh sách:', err)
-      } finally {
-        this.loading = false
-      }
-    },
-
-    async loadStats() {
-      try {
-        const { data } = await axios.get(`${ADMIN_API}/contacts/stats`)
-        this.stats = data.data
-      } catch { /* silent */ }
-    },
-
-    async selectContact(c) {
-      this.selectedContact = null
-      this.detailLoading = true
-      this.replyText = ''
-      this.replyError = ''
-      this.replySuccess = ''
-      try {
-        const { data } = await axios.get(`${ADMIN_API}/contacts/${c.id}`)
-        this.selectedContact = data.data
-        // Cập nhật is_read trong danh sách
-        const idx = this.contacts.findIndex(x => x.id === c.id)
-        if (idx > -1) this.contacts[idx].is_read = true
-        this.$nextTick(this.scrollThread)
-      } catch {
-        this.selectedContact = c
-      } finally {
-        this.detailLoading = false
-      }
-    },
-
-    // ─── Trạng thái & xóa ──────────────────────────────
-    async changeStatus() {
-      try {
-        await axios.patch(`${ADMIN_API}/contacts/${this.selectedContact.id}/status`, {
-          status: this.selectedContact.status,
-        })
-        const idx = this.contacts.findIndex(x => x.id === this.selectedContact.id)
-        if (idx > -1) this.contacts[idx].status = this.selectedContact.status
-        this.loadStats()
-      } catch {
-        alert('Không thể cập nhật trạng thái.')
-      }
-    },
-
-    async deleteContact() {
-      if (!confirm(`Xóa liên hệ của "${this.selectedContact.name}"?`)) return
-      try {
-        await axios.delete(`${ADMIN_API}/contacts/${this.selectedContact.id}`)
-        this.contacts = this.contacts.filter(c => c.id !== this.selectedContact.id)
-        this.selectedContact = null
-        this.loadStats()
-      } catch {
-        alert('Không thể xóa liên hệ.')
-      }
-    },
-
-    // ─── Gửi phản hồi ──────────────────────────────────
-    async sendReply() {
-      if (!this.replyText.trim()) return
-      this.replying = true
-      this.replyError = ''
-      this.replySuccess = ''
-      try {
-        const { data } = await axios.post(`${ADMIN_API}/contacts/${this.selectedContact.id}/reply`, {
-          message:       this.replyText,
-          send_email:    this.sendEmail,
-          mark_resolved: this.markResolved,
-          admin_name:    'Admin BanDoThao',
-        })
-        // Thêm tin nhắn vào thread
-        if (!this.selectedContact.chat_messages) this.selectedContact.chat_messages = []
-        this.selectedContact.chat_messages.push({
-          id:          Date.now(),
-          sender:      'admin',
-          sender_name: 'Admin BanDoThao',
-          message:     this.replyText,
-          time_ago:    'vừa xong',
-        })
-        if (this.markResolved) {
-          this.selectedContact.status = 'resolved'
-          const idx = this.contacts.findIndex(x => x.id === this.selectedContact.id)
-          if (idx > -1) this.contacts[idx].status = 'resolved'
-        }
-        this.replyText = ''
-        this.replySuccess = data.message + (data.data.email_sent ? ' Email đã được gửi cho khách.' : '')
-        this.loadStats()
-        this.$nextTick(this.scrollThread)
-        setTimeout(() => { this.replySuccess = '' }, 5000)
-      } catch (err) {
-        this.replyError = err.response?.data?.message || 'Có lỗi xảy ra.'
-      } finally {
-        this.replying = false
-      }
-    },
-
-    // ─── Helpers ───────────────────────────────────────
-    setTab(key) {
-      this.activeTab = key
-      this.meta.current_page = 1
-      this.loadContacts()
-    },
-
-    changePage(page) {
-      this.meta.current_page = page
-      this.loadContacts()
-    },
-
-    debouncedSearch() {
-      clearTimeout(this.searchTimer)
-      this.searchTimer = setTimeout(() => {
-        this.meta.current_page = 1
-        this.loadContacts()
-      }, 400)
-    },
-
-    scrollThread() {
-      if (this.$refs.threadRef) {
-        this.$refs.threadRef.scrollTop = this.$refs.threadRef.scrollHeight
-      }
-    },
-  }
-}
+onBeforeUnmount(() => {
+  clearInterval(statsInterval);
+  clearTimeout(searchTimer);
+});
 </script>
 
 <style scoped>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-.admin-page { display: flex; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; }
+.admin-page { display: flex; height: 100vh; overflow: hidden; font-family: "Segoe UI", sans-serif; background: #f1f5f9; color: #1e293b; }
 
 .sidebar { width: 220px; background: #0f172a; display: flex; flex-direction: column; padding: 20px 0; flex-shrink: 0; }
 .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 24px; color: #f8fafc; font-weight: 700; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 12px; }
 .logo-icon { width: 34px; height: 34px; background: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; padding: 0 10px; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; font-size: 13px; font-weight: 500; text-decoration: none; cursor: pointer; position: relative; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; font-size: 13px; font-weight: 500; text-decoration: none; cursor: pointer; }
 .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
 .nav-item:hover { background: rgba(255,255,255,.06); color: #f8fafc; }
 .nav-item.active { background: #1e3a8a; color: #93c5fd; }
@@ -482,7 +365,7 @@ export default {
 
 .controls-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 24px 12px; flex-shrink: 0; }
 .tabs { display: flex; gap: 4px; }
-.tab-btn { padding: 7px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-weight: 500; background: #fff; color: #64748b; cursor: pointer; font-family: inherit; transition: all .15s; }
+.tab-btn { padding: 7px 16px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; font-weight: 500; background: #fff; color: #64748b; cursor: pointer; font-family: inherit; }
 .tab-btn.active { background: #0f172a; color: #fff; border-color: #0f172a; }
 .filters { display: flex; gap: 8px; }
 .filter-select { padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #374151; background: #fff; outline: none; font-family: inherit; }
@@ -492,10 +375,10 @@ export default {
 .contact-list { border-right: 1px solid #e2e8f0; overflow-y: auto; }
 .loading-state, .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 20px; color: #94a3b8; font-size: 14px; }
 .spinner-lg { width: 24px; height: 24px; border: 2px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin .7s linear infinite; }
-.contact-item { display: flex; gap: 12px; padding: 14px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background .1s; position: relative; }
+.contact-item { display: flex; gap: 12px; padding: 14px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; position: relative; }
 .contact-item:hover { background: #f8fafc; }
 .contact-item.selected { background: #eff6ff; }
-.contact-item.unread::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #2563eb; border-radius: 0 2px 2px 0; }
+.contact-item.unread::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #2563eb; border-radius: 0 2px 2px 0; }
 .contact-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
 .contact-preview { flex: 1; min-width: 0; }
 .contact-meta { display: flex; justify-content: space-between; margin-bottom: 5px; }
@@ -550,7 +433,7 @@ export default {
 .thread-time { font-size: 10px; color: #94a3b8; }
 .thread-bubble p { font-size: 13px; padding: 9px 13px; border-radius: 10px; line-height: 1.5; }
 .from-customer .thread-bubble p { background: #f1f5f9; color: #1e293b; border-bottom-left-radius: 3px; }
-.from-admin .thread-bubble p { background: #1e3a8a; color: #fff; border-bottom-right-radius: 3px; text-align: left; }
+.from-admin    .thread-bubble p { background: #1e3a8a; color: #fff; border-bottom-right-radius: 3px; text-align: left; }
 
 .reply-box { border-top: 1px solid #e2e8f0; padding: 14px 20px; flex-shrink: 0; }
 .reply-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -558,10 +441,8 @@ export default {
 .quick-replies { display: flex; gap: 6px; flex-wrap: wrap; }
 .quick-reply-btn { font-size: 11px; padding: 3px 9px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; color: #475569; font-family: inherit; }
 .quick-reply-btn:hover { background: #e2e8f0; }
-.reply-box textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; resize: none; outline: none; font-family: inherit; color: #1e293b; margin-bottom: 8px; }
+.reply-box textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; resize: none; outline: none; font-family: inherit; color: #1e293b; margin-bottom: 10px; }
 .reply-box textarea:focus { border-color: #2563eb; }
-.reply-error { font-size: 12px; color: #dc2626; margin-bottom: 8px; }
-.reply-success { font-size: 12px; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; }
 .reply-footer { display: flex; align-items: center; justify-content: space-between; }
 .reply-options { display: flex; gap: 16px; }
 .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #64748b; cursor: pointer; }
