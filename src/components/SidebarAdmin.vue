@@ -83,7 +83,6 @@
       <router-link to="/brandadmin" class="nav-item">
         <i class="bi bi-bookmark-star"></i> Thương hiệu
       </router-link>
-      
 
       <router-link to="/orderadmin" class="nav-item">
         <i class="bi bi-cart"></i> Đơn hàng
@@ -104,8 +103,9 @@
         Đánh giá
       </router-link>
       <router-link to="/admin/contacts" class="nav-item">
-  Liên hệ
-</router-link>
+        <i class="bi bi-chat-left-text"></i>
+        Liên hệ
+      </router-link>
     </nav>
 
     <div class="sidebar-footer">
