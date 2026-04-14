@@ -398,7 +398,7 @@ import axios from "axios";
 import SidebarAdmin from "@/components/SidebarAdmin.vue";
 import HeaderAdmin from "@/components/HeaderAdmin.vue";
 
-const API = import.meta.env.VITE_API_URL || "/api";
+const API = import.meta.env.VITE_API_BASE || "/api";
 const ADMIN_API = `${API}/admin`;
 
 const AVATAR_COLORS = [

@@ -1,21 +1,21 @@
-
-
-
-
-
 <script setup>
 import AppHeader from "../components/AppHeader.vue";
 import AppFooter from "../components/AppFooter.vue";
 import { ref, computed, onMounted } from "vue";
 import { useCoupons } from "@/stores/coupons";
+import { useUserCoupons } from "@/stores/couponuser";
 
 const store = useCoupons();
+const userCouponStore = useUserCoupons();
 
 const categories = ["Tất cả", "Giảm phần trăm", "Giảm cố định"];
 const activeCategory = ref("Tất cả");
 const copiedCode = ref(null);
 const searchQuery = ref("");
 const loading = ref(true);
+
+const claimingIds = ref(new Set());
+const claimedIds = ref(new Set());
 
 onMounted(async () => {
   await store.loadCoupons();
@@ -87,6 +87,25 @@ function copyCode(code) {
   setTimeout(() => {
     copiedCode.value = null;
   }, 2000);
+}
+
+async function saveCoupon(coupon) {
+  const token = JSON.parse(localStorage.getItem("auth") || "{}")?.token;
+  if (!token) {
+    alert("Vui lòng đăng nhập để lưu mã giảm giá");
+    return;
+  }
+
+  claimingIds.value = new Set([...claimingIds.value, coupon.id]);
+  const result = await userCouponStore.claimCoupon(coupon.id);
+
+  claimingIds.value = new Set(
+    [...claimingIds.value].filter((id) => id !== coupon.id)
+  );
+
+  if (result) {
+    claimedIds.value = new Set([...claimedIds.value, coupon.id]);
+  }
 }
 
 const steps = [
@@ -330,15 +349,18 @@ const steps = [
             >
           </div>
 
-          <!-- Code + Copy -->
+          <!-- Code + Copy + Save -->
           <div class="code-row">
             <span class="code-box">{{ c.code }}</span>
+
+            <!-- Nút sao chép -->
             <button
               class="copy-btn"
               :disabled="isUnavailable(c)"
               @click="!isUnavailable(c) && copyCode(c.code)"
+              title="Sao chép mã"
             >
-              <template v-if="copiedCode === c.code">
+              <template v-if="copiedCode === c.id">
                 <svg
                   width="14"
                   height="14"
@@ -351,7 +373,6 @@ const steps = [
                 >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                Đã sao chép
               </template>
               <template v-else>
                 <svg
@@ -369,7 +390,60 @@ const steps = [
                     d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
                   />
                 </svg>
-                Sao chép
+              </template>
+            </button>
+
+            <!-- Nút lưu mã -->
+            <button
+              class="save-btn"
+              :class="{
+                'save-btn--saved': claimedIds.has(c.id),
+                'save-btn--loading': claimingIds.has(c.id),
+              }"
+              :disabled="
+                isUnavailable(c) ||
+                claimedIds.has(c.id) ||
+                claimingIds.has(c.id)
+              "
+              @click="saveCoupon(c)"
+              :title="
+                claimedIds.has(c.id)
+                  ? 'Đã lưu vào tài khoản'
+                  : 'Lưu mã vào tài khoản'
+              "
+            >
+              <!-- Đã lưu -->
+              <template v-if="claimedIds.has(c.id)">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  stroke="none"
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+                </svg>
+                Đã lưu
+              </template>
+              <!-- Đang lưu -->
+              <template v-else-if="claimingIds.has(c.id)">
+                <span class="save-spinner"></span>
+              </template>
+              <!-- Chưa lưu -->
+              <template v-else>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+                </svg>
+                Lưu mã
               </template>
             </button>
           </div>
@@ -834,35 +908,41 @@ img {
   color: #9ca3af;
 }
 
+/* ── CODE ROW ── */
 .code-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-top: 4px;
 }
 .code-box {
   flex: 1;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  padding: 6px 10px;
+  padding: 6px 8px;
   border: 1.5px dashed #d1d5db;
   border-radius: 6px;
   color: #374151;
   text-align: center;
   background: #f9fafb;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* Nút sao chép — icon only */
 .copy-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-  padding: 7px 12px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
   border-radius: 7px;
-  white-space: nowrap;
+  color: #fff;
   transition: opacity 0.15s;
 }
 .copy-btn:disabled {
@@ -870,13 +950,60 @@ img {
   opacity: 0.5;
 }
 .copy-btn:not(:disabled):hover {
-  opacity: 0.88;
+  opacity: 0.82;
 }
 .color-blue .copy-btn {
   background: #1565c0;
 }
 .color-orange .copy-btn {
   background: #e65100;
+}
+
+/* Nút lưu mã */
+.save-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  padding: 0 10px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: #374151;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s, background 0.2s;
+}
+.save-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+.save-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.save-btn--saved {
+  background: #059669;
+}
+.save-btn--loading {
+  background: #6b7280;
+}
+
+.save-spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── HOW TO USE ── */

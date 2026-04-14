@@ -56,7 +56,7 @@ export const useUsers = defineStore("users", () => {
     };
     const createUser = async (formData) => {
         try {
-            const res = await axios.post(`${apiBase}/users`, formData, {
+            const res = await axios.post(`${apiBase}/admin/users`, formData, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "multipart/form-data",
@@ -75,7 +75,7 @@ export const useUsers = defineStore("users", () => {
             if (formData instanceof FormData && !formData.has("_method")) {
                 formData.append("_method", "PUT");
             }
-            const res = await axios.post(`${apiBase}/users/${id}`, formData, {
+            const res = await axios.post(`${apiBase}/admin/users/${id}`, formData, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "multipart/form-data",
@@ -97,7 +97,7 @@ export const useUsers = defineStore("users", () => {
         );
         if (!confirmed) return false;
         try {
-            await axios.delete(`${apiBase}/users/${id}`, {
+            await axios.delete(`${apiBase}/admin/users/${id}`, {
                 headers: authHeaders(),
             });
             notify.toastSuccess("Xóa người dùng thành công");

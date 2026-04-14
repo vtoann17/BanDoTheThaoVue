@@ -110,7 +110,7 @@ const suggestions = ['Giày chạy bộ', 'Áo bóng đá', 'Phụ kiện gym', 
           <div class="bubble">{{ m.content }}</div>
 
           <div v-if="m.products.length" class="products">
-            <a v-for="p in m.products" :key="p.id" :href="`/products/${p.slug}`" class="product">
+            <a v-for="p in m.products" :key="p.id" :href="`/productdetail/${p.slug}`" class="product">
               <img :src="imgSrc(p.image)" :alt="p.name" />
               <div class="product-info">
                 <b class="product-name">{{ p.name }}</b>

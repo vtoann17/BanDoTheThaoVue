@@ -6,8 +6,10 @@ import AppFooter from "../components/AppFooter.vue";
 import { useProducts } from "@/stores/products";
 import { useCart } from "../stores/carts";
 import { useNotify } from "@/composables/useNotify";
+import { useReviews } from "../stores/reviews";
 
 const route = useRoute();
+const reviewStore = useReviews();
 const store = useProducts();
 const cartStore = useCart();
 const { toastSuccess, toastError, toastInfo } = useNotify();
@@ -151,8 +153,8 @@ const checkFavoriteStatus = async () => {
   try {
     const res = await fetch(`${import.meta.env.VITE_API_BASE}/favourites`, {
       headers: {
-        "Authorization": `Bearer ${token}`,
-        "Accept": "application/json"
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
       },
     });
     if (res.ok) {
@@ -183,8 +185,8 @@ const handleFavorite = async () => {
       method: isAdding ? "POST" : "DELETE",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${token}`, // Token giờ đã có giá trị thật
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`, // Token giờ đã có giá trị thật
       },
       body: isAdding ? JSON.stringify({ product_id: product.value.id }) : null,
     });
@@ -205,10 +207,19 @@ const handleFavorite = async () => {
   }
 };
 
-// Theo dõi khi dữ liệu product về thì check liked ngay
-watch(() => product.value, (newVal) => {
-  if (newVal) checkFavoriteStatus();
-});
+watch(
+  () => product.value,
+  (newVal) => {
+    if (newVal) {
+      checkFavoriteStatus();
+
+      reviewStore.loadReviews({
+        product_id: newVal.id,
+        per_page: 5,
+      });
+    }
+  }
+);
 
 async function addToCart() {
   if (!matchedVariant.value || matchedVariant.value.stock === 0) return;
@@ -227,6 +238,16 @@ const related = computed(() =>
 onMounted(() => {
   store.loadProducts({ per_page: 8 });
 });
+const avgRating = computed(() => {
+  if (!reviewStore.reviews.length) return 0;
+
+  const total = reviewStore.reviews.reduce(
+    (sum, r) => sum + Number(r.rating),
+    0
+  );
+
+  return (total / reviewStore.reviews.length).toFixed(1);
+});
 </script>
 
 <template>
@@ -244,10 +265,19 @@ onMounted(() => {
           </div>
           <div class="skel-info">
             <div class="skel-line" style="width: 40%; height: 12px"></div>
-            <div class="skel-line" style="width: 75%; height: 26px; margin-top: 6px"></div>
+            <div
+              class="skel-line"
+              style="width: 75%; height: 26px; margin-top: 6px"
+            ></div>
             <div class="skel-line" style="width: 55%; height: 12px"></div>
-            <div class="skel-line" style="width: 100%; height: 50px; margin-top: 12px"></div>
-            <div class="skel-line" style="width: 30%; height: 32px; margin-top: 16px"></div>
+            <div
+              class="skel-line"
+              style="width: 100%; height: 50px; margin-top: 12px"
+            ></div>
+            <div
+              class="skel-line"
+              style="width: 30%; height: 32px; margin-top: 16px"
+            ></div>
           </div>
         </div>
       </div>
@@ -256,7 +286,12 @@ onMounted(() => {
       <div v-else-if="!product" class="state-wrap not-found">
         <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="32" cy="32" r="30" stroke="#E5E7EB" stroke-width="2" />
-          <path d="M20 20l24 24M44 20L20 44" stroke="#D1D5DB" stroke-width="2.5" stroke-linecap="round" />
+          <path
+            d="M20 20l24 24M44 20L20 44"
+            stroke="#D1D5DB"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
         </svg>
         <p>Không tìm thấy sản phẩm</p>
         <router-link to="/" class="btn-back">← Về trang chủ</router-link>
@@ -268,7 +303,10 @@ onMounted(() => {
         <nav class="breadcrumb">
           <router-link to="/">Trang chủ</router-link>
           <span class="sep">/</span>
-          <router-link v-if="product.subcategory" :to="`/category/${product.subcategory.id}`">
+          <router-link
+            v-if="product.subcategory"
+            :to="`/category/${product.subcategory.id}`"
+          >
             {{ product.subcategory.name }}
           </router-link>
           <span class="sep">/</span>
@@ -282,13 +320,20 @@ onMounted(() => {
             <div class="main-image-wrap">
               <span v-if="product.brand" class="badge-brand">{{
                 product.brand.name
-                }}</span>
-              <span v-if="displayPrice.sale > 0" class="badge-sale-img">-{{ displayPrice.sale }}%</span>
+              }}</span>
+              <span v-if="displayPrice.sale > 0" class="badge-sale-img"
+                >-{{ displayPrice.sale }}%</span
+              >
               <img :src="mainSrc" :alt="product.name" class="main-img" />
             </div>
             <div v-if="imageList.length >= 1" class="thumb-row">
-              <button v-for="(img, i) in imageList" :key="i" class="thumb-btn" :class="{ active: activeImage === i }"
-                @click="activeImage = i">
+              <button
+                v-for="(img, i) in imageList"
+                :key="i"
+                class="thumb-btn"
+                :class="{ active: activeImage === i }"
+                @click="activeImage = i"
+              >
                 <img :src="img" :alt="`${product.name} ${i + 1}`" />
               </button>
             </div>
@@ -300,18 +345,28 @@ onMounted(() => {
               <div class="product-meta">
                 <span v-if="product.brand" class="meta-brand">{{
                   product.brand.name
-                  }}</span>
-                <span v-if="product.brand && product.subcategory" class="meta-sep">·</span>
+                }}</span>
+                <span
+                  v-if="product.brand && product.subcategory"
+                  class="meta-sep"
+                  >·</span
+                >
                 <span v-if="product.subcategory" class="meta-cat">{{
                   product.subcategory.name
-                  }}</span>
+                }}</span>
               </div>
-              <button class="btn-heart" :class="{ active: liked }" @click="handleFavorite">
+              <button
+                class="btn-heart"
+                :class="{ active: liked }"
+                @click="handleFavorite"
+              >
                 <svg viewBox="0 0 24 24" width="15" height="15">
                   <path
                     d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                    :fill="liked ? '#ef4444' : 'none'" :stroke="liked ? '#ef4444' : 'currentColor'"
-                    stroke-width="1.8" />
+                    :fill="liked ? '#ef4444' : 'none'"
+                    :stroke="liked ? '#ef4444' : 'currentColor'"
+                    stroke-width="1.8"
+                  />
                 </svg>
               </button>
             </div>
@@ -320,14 +375,23 @@ onMounted(() => {
 
             <div class="rating-row">
               <div class="stars">
-                <svg v-for="i in 5" :key="i" viewBox="0 0 20 20" width="12" height="12"
-                  :fill="i <= (product.rating ?? 4) ? '#F59E0B' : '#D1D5DB'">
+                <svg
+                  v-for="i in 5"
+                  :key="i"
+                  viewBox="0 0 20 20"
+                  width="12"
+                  height="12"
+                  :fill="i <= avgRating ? '#F59E0B' : '#D1D5DB'"
+                >
                   <path
-                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                  />
                 </svg>
                 <span class="rating-num">{{ product.rating ?? "4.8" }}</span>
               </div>
-              <span class="rating-count">{{ product.reviews_count ?? 0 }} đánh giá</span>
+              <span class="rating-count"
+                >{{ reviewStore.total }} đánh giá</span
+              >
               <template v-if="matchedVariant">
                 <span class="dot-sep">·</span>
                 <span class="sku-label">SKU: {{ matchedVariant.sku }}</span>
@@ -343,10 +407,10 @@ onMounted(() => {
               <template v-if="displayPrice.sale > 0">
                 <span class="price-sale">{{
                   fmt(displayPrice.discounted)
-                  }}</span>
+                }}</span>
                 <span class="price-original">{{
                   fmt(displayPrice.original)
-                  }}</span>
+                }}</span>
                 <span class="badge-sale-inline">-{{ displayPrice.sale }}%</span>
               </template>
               <template v-else>
@@ -359,7 +423,7 @@ onMounted(() => {
               <span class="stock-dot" :class="stockStatus.cls"></span>
               <span class="stock-label" :class="stockStatus.cls">{{
                 stockStatus.label
-                }}</span>
+              }}</span>
             </div>
 
             <div class="divider"></div>
@@ -370,21 +434,40 @@ onMounted(() => {
                 <span class="attr-name">{{ attr.name }}</span>
                 <span v-if="selectedLabel(attr)" class="attr-selected">{{
                   selectedLabel(attr)
-                  }}</span>
+                }}</span>
               </div>
-              <div v-if="attr.name.toLowerCase().includes('màu')" class="color-list">
-                <button v-for="val in attr.values" :key="val.id" class="color-swatch" :class="{
-                  active: selected[attr.id] === val.id,
-                  unavail: !isAvailable(attr.id, val.id),
-                }" :title="val.value" @click="selectAttr(attr.id, val.id)">
-                  <span class="swatch-inner" :style="{ background: val.hex ?? val.color ?? val.value }"></span>
+              <div
+                v-if="attr.name.toLowerCase().includes('màu')"
+                class="color-list"
+              >
+                <button
+                  v-for="val in attr.values"
+                  :key="val.id"
+                  class="color-swatch"
+                  :class="{
+                    active: selected[attr.id] === val.id,
+                    unavail: !isAvailable(attr.id, val.id),
+                  }"
+                  :title="val.value"
+                  @click="selectAttr(attr.id, val.id)"
+                >
+                  <span
+                    class="swatch-inner"
+                    :style="{ background: val.hex ?? val.color ?? val.value }"
+                  ></span>
                 </button>
               </div>
               <div v-else class="size-list">
-                <button v-for="val in attr.values" :key="val.id" class="size-pill" :class="{
-                  active: selected[attr.id] === val.id,
-                  unavail: !isAvailable(attr.id, val.id),
-                }" @click="selectAttr(attr.id, val.id)">
+                <button
+                  v-for="val in attr.values"
+                  :key="val.id"
+                  class="size-pill"
+                  :class="{
+                    active: selected[attr.id] === val.id,
+                    unavail: !isAvailable(attr.id, val.id),
+                  }"
+                  @click="selectAttr(attr.id, val.id)"
+                >
                   {{ val.value }}
                 </button>
               </div>
@@ -399,27 +482,57 @@ onMounted(() => {
                   −
                 </button>
                 <span>{{ qty }}</span>
-                <button @click="qty < maxQty ? qty++ : null" :disabled="qty >= maxQty">
+                <button
+                  @click="qty < maxQty ? qty++ : null"
+                  :disabled="qty >= maxQty"
+                >
                   +
                 </button>
               </div>
-              <button class="btn-cart" :class="{ success: addedToCart }" :disabled="!matchedVariant || matchedVariant.stock === 0 || addedToCart
-                " @click="addToCart">
-                <svg v-if="!addedToCart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  width="15" height="15">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              <button
+                class="btn-cart"
+                :class="{ success: addedToCart }"
+                :disabled="
+                  !matchedVariant || matchedVariant.stock === 0 || addedToCart
+                "
+                @click="addToCart"
+              >
+                <svg
+                  v-if="!addedToCart"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="15"
+                  height="15"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
                 </svg>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15"
-                  height="15">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                <svg
+                  v-else
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="15"
+                  height="15"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 {{
                   matchedVariant && matchedVariant.stock === 0
                     ? "Hết hàng"
                     : addedToCart
-                      ? "Đã thêm!"
-                      : "Thêm vào giỏ"
+                    ? "Đã thêm!"
+                    : "Thêm vào giỏ"
                 }}
               </button>
               <button class="btn-buy">Mua ngay</button>
@@ -428,22 +541,53 @@ onMounted(() => {
             <!-- Policies -->
             <div class="policy-row">
               <div class="policy-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="12"
+                  height="12"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 Miễn phí vận chuyển
               </div>
               <div class="policy-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="12"
+                  height="12"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
                 </svg>
                 Đổi trả 30 ngày
               </div>
               <div class="policy-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  width="12"
+                  height="12"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
                 </svg>
                 Bảo hành 2 năm
               </div>
@@ -460,17 +604,33 @@ onMounted(() => {
             </div>
             <router-link to="/products" class="btn-see-all">
               Xem tất cả
-              <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
-                <path fill-rule="evenodd"
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                width="12"
+                height="12"
+              >
+                <path
+                  fill-rule="evenodd"
                   d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                  clip-rule="evenodd" />
+                  clip-rule="evenodd"
+                />
               </svg>
             </router-link>
           </div>
           <div class="related-grid">
-            <router-link v-for="p in related" :key="p.id" :to="`/productdetail/${p.slug}`" class="rel-card">
+            <router-link
+              v-for="p in related"
+              :key="p.id"
+              :to="`/productdetail/${p.slug}`"
+              class="rel-card"
+            >
               <div class="rel-img">
-                <img :src="`${baseUrl}/storage/${p.image}`" :alt="p.name" loading="lazy" />
+                <img
+                  :src="`${baseUrl}/storage/${p.image}`"
+                  :alt="p.name"
+                  loading="lazy"
+                />
                 <div v-if="p.sale > 0" class="rel-badge">-{{ p.sale }}%</div>
               </div>
               <div class="rel-info">
@@ -479,13 +639,29 @@ onMounted(() => {
                   <template v-if="p.sale > 0">
                     <span class="rel-price-sale">{{
                       fmt(p.price * (1 - p.sale / 100))
-                      }}</span>
+                    }}</span>
                     <span class="rel-price-orig">{{ fmt(p.price) }}</span>
                   </template>
                   <span v-else class="rel-price-main">{{ fmt(p.price) }}</span>
                 </div>
               </div>
             </router-link>
+          </div>
+        </section>
+        <section class="review-section" v-if="reviewStore.reviews.length">
+          <h3 class="section-title">Đánh giá sản phẩm</h3>
+
+          <div v-for="r in reviewStore.reviews" :key="r.id" class="review-item">
+            <div class="review-head">
+              <strong>{{ r.user?.name }}</strong>
+              <span class="review-rating">⭐ {{ r.rating }}/5</span>
+            </div>
+
+            <p class="review-content">{{ r.comment }}</p>
+
+            <div v-if="r.image" class="review-img">
+              <img :src="`${baseUrl}/storage/${r.image}`" />
+            </div>
           </div>
         </section>
       </template>
@@ -1334,5 +1510,35 @@ img {
   .related-grid {
     gap: 9px;
   }
+}
+.review-section{
+  margin-top:30px;
+}
+
+.review-item{
+  border-bottom:1px solid #eee;
+  padding:12px 0;
+}
+
+.review-head{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:5px;
+}
+
+.review-rating{
+  color:#f59e0b;
+  font-size:13px;
+}
+
+.review-content{
+  font-size:13px;
+  color:#444;
+}
+
+.review-img img{
+  width:80px;
+  border-radius:6px;
+  margin-top:6px;
 }
 </style>
