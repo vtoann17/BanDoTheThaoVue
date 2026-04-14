@@ -1,15 +1,13 @@
 <template>
   <div class="contact-page">
-    <!-- Hero Section -->
+    <!-- Hero -->
     <div class="hero-section">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <span class="badge-dot"></span>
-          Hỗ trợ trực tuyến
-        </div>
-        <h1 class="hero-title">Liên hệ với chúng tôi</h1>
-        <p class="hero-subtitle">Đội ngũ hỗ trợ luôn sẵn sàng giúp bạn 24/7</p>
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Hỗ trợ trực tuyến
       </div>
+      <h1 class="hero-title">Liên hệ với chúng tôi</h1>
+      <p class="hero-subtitle">Đội ngũ hỗ trợ luôn sẵn sàng giúp bạn 24/7</p>
     </div>
 
     <div class="main-container">
@@ -79,112 +77,60 @@
             <p>Điền thông tin bên dưới, chúng tôi sẽ phản hồi trong vòng 24h</p>
           </div>
 
-          <div class="contact-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label>Họ và tên <span class="required">*</span></label>
-                <input
-                  v-model="form.name"
-                  type="text"
-                  placeholder="Nguyễn Văn A"
-                  :class="{ error: errors.name }"
-                />
-                <span v-if="errors.name" class="error-msg">{{
-                  errors.name
-                }}</span>
-              </div>
-              <div class="form-group">
-                <label>Số điện thoại</label>
-                <input
-                  v-model="form.phone"
-                  type="tel"
-                  placeholder="0912 345 678"
-                />
-              </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Họ và tên <span class="required">*</span></label>
+              <input v-model="contactStore.form.name" type="text" placeholder="Nguyễn Văn A"
+                :class="{ error: contactStore.errors.name }" />
+              <span v-if="contactStore.errors.name" class="error-msg">{{ contactStore.errors.name }}</span>
             </div>
             <div class="form-group">
-              <label>Email <span class="required">*</span></label>
-              <input
-                v-model="form.email"
-                type="email"
-                placeholder="email@example.com"
-                :class="{ error: errors.email }"
-              />
-              <span v-if="errors.email" class="error-msg">{{
-                errors.email
-              }}</span>
-            </div>
-            <div class="form-group">
-              <label>Chủ đề <span class="required">*</span></label>
-              <select v-model="form.topic" :class="{ error: errors.topic }">
-                <option value="">-- Chọn chủ đề --</option>
-                <option value="order">Hỏi về đơn hàng</option>
-                <option value="product">Thông tin sản phẩm</option>
-                <option value="payment">Thanh toán & hoàn tiền</option>
-                <option value="technical">Hỗ trợ kỹ thuật</option>
-                <option value="other">Khác</option>
-              </select>
-              <span v-if="errors.topic" class="error-msg">{{
-                errors.topic
-              }}</span>
-            </div>
-            <div class="form-group">
-              <label>Nội dung <span class="required">*</span></label>
-              <textarea
-                v-model="form.message"
-                rows="5"
-                placeholder="Mô tả vấn đề của bạn..."
-                :class="{ error: errors.message }"
-              ></textarea>
-              <span v-if="errors.message" class="error-msg">{{
-                errors.message
-              }}</span>
-            </div>
-
-            <!-- API Error -->
-            <div v-if="apiError" class="api-error-banner">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                width="16"
-                height="16"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              {{ apiError }}
-            </div>
-
-            <button
-              class="submit-btn"
-              @click="submitForm"
-              :disabled="submitting"
-            >
-              <span v-if="!submitting">Gửi tin nhắn</span>
-              <span v-else class="loading-text"
-                ><span class="spinner"></span>Đang gửi...</span
-              >
-            </button>
-
-            <div v-if="submitted" class="success-banner">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-              <div>
-                <strong>Gửi thành công!</strong>
-                <p>{{ successMsg }}</p>
-              </div>
+              <label>Số điện thoại</label>
+              <input v-model="contactStore.form.phone" type="tel" placeholder="0912 345 678" />
             </div>
           </div>
+
+          <div class="form-group">
+            <label>Email <span class="required">*</span></label>
+            <input v-model="contactStore.form.email" type="email" placeholder="email@example.com"
+              :class="{ error: contactStore.errors.email }" />
+            <span v-if="contactStore.errors.email" class="error-msg">{{ contactStore.errors.email }}</span>
+          </div>
+
+          <div class="form-group">
+            <label>Chủ đề <span class="required">*</span></label>
+            <select v-model="contactStore.form.topic" :class="{ error: contactStore.errors.topic }">
+              <option value="">-- Chọn chủ đề --</option>
+              <option value="order">Hỏi về đơn hàng</option>
+              <option value="product">Thông tin sản phẩm</option>
+              <option value="payment">Thanh toán & hoàn tiền</option>
+              <option value="technical">Hỗ trợ kỹ thuật</option>
+              <option value="other">Khác</option>
+            </select>
+            <span v-if="contactStore.errors.topic" class="error-msg">{{ contactStore.errors.topic }}</span>
+          </div>
+
+          <div class="form-group">
+            <label>Nội dung <span class="required">*</span></label>
+            <textarea v-model="contactStore.form.message" rows="5" placeholder="Mô tả vấn đề của bạn..."
+              :class="{ error: contactStore.errors.message }"></textarea>
+            <span v-if="contactStore.errors.message" class="error-msg">{{ contactStore.errors.message }}</span>
+          </div>
+
+          <div v-if="contactStore.submitted" class="success-banner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div>
+              <strong>Gửi thành công!</strong>
+              <p>Chúng tôi sẽ liên hệ lại với bạn sớm nhất có thể.</p>
+            </div>
+          </div>
+
+          <button class="submit-btn" @click="contactStore.submitForm" :disabled="contactStore.submitting">
+            <span v-if="!contactStore.submitting">Gửi tin nhắn</span>
+            <span v-else class="loading-text">
+              <span class="spinner"></span>Đang gửi...
+            </span>
+          </button>
         </div>
 
         <!-- ─── Chat Trực Tuyến ─── -->
@@ -195,8 +141,8 @@
           </div>
 
           <div class="chat-widget">
-            <!-- Chưa bắt đầu chat -->
-            <div v-if="!chatStarted" class="chat-intro">
+            <!-- Chưa bắt đầu -->
+            <div v-if="!chatStore.chatStarted" class="chat-intro">
               <div class="agents-preview">
                 <div class="agent-avatars">
                   <div class="agent-avatar av1">T</div>
@@ -208,48 +154,17 @@
                   <span>3 nhân viên đang trực tuyến</span>
                 </div>
               </div>
-              <p class="response-time">
-                Thời gian phản hồi trung bình: <strong>~2 phút</strong>
-              </p>
+              <p class="response-time">Thời gian phản hồi: <strong>~2 phút</strong></p>
+
               <div class="chat-start-form">
-                <input
-                  v-model="chatUser.name"
-                  type="text"
-                  placeholder="Tên của bạn *"
-                />
-                <input
-                  v-model="chatUser.email"
-                  type="email"
-                  placeholder="Email (không bắt buộc)"
-                />
-                <div v-if="chatError" class="chat-error">{{ chatError }}</div>
-                <button
-                  class="start-chat-btn"
-                  @click="startChat"
-                  :disabled="chatLoading"
-                >
-                  <svg
-                    v-if="!chatLoading"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                  >
-                    <path
-                      d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-                    />
+                <input v-model="chatStore.chatUser.name" type="text" placeholder="Tên của bạn *" />
+                <input v-model="chatStore.chatUser.email" type="email" placeholder="Email (không bắt buộc)" />
+                <button class="start-chat-btn" @click="chatStore.startChat" :disabled="chatStore.chatLoading">
+                  <svg v-if="!chatStore.chatLoading" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                   </svg>
-                  <span
-                    class="spinner"
-                    v-else
-                    style="
-                      border-color: rgba(255, 255, 255, 0.3);
-                      border-top-color: #fff;
-                    "
-                  ></span>
-                  {{ chatLoading ? "Đang kết nối..." : "Bắt đầu chat" }}
+                  <span v-else class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:#fff;"></span>
+                  {{ chatStore.chatLoading ? "Đang kết nối..." : "Bắt đầu chat" }}
                 </button>
               </div>
             </div>
@@ -264,33 +179,17 @@
                     <span class="agent-status">Đang hoạt động</span>
                   </div>
                 </div>
-                <button
-                  class="end-chat-btn"
-                  @click="endChat"
-                  title="Kết thúc chat"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="14"
-                    height="14"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
+                <button class="end-chat-btn" @click="chatStore.endChat">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
                 </button>
               </div>
 
               <div class="messages-area" ref="messagesArea">
-                <div
-                  v-for="msg in messages"
-                  :key="msg.id"
+                <div v-for="msg in chatStore.messages" :key="msg.id"
                   class="message"
-                  :class="
-                    msg.sender === 'customer' ? 'message-user' : 'message-agent'
-                  "
+                  :class="msg.sender === 'customer' ? 'message-user' : 'message-agent'"
                 >
                   <div v-if="msg.sender === 'admin'" class="msg-avatar">BT</div>
                   <div class="msg-bubble">
@@ -298,38 +197,20 @@
                     <span class="msg-time">{{ msg.created_at }}</span>
                   </div>
                 </div>
-                <div v-if="agentTyping" class="message message-agent">
-                  <div class="msg-avatar">BT</div>
-                  <div class="msg-bubble typing-bubble">
-                    <span class="dot"></span><span class="dot"></span
-                    ><span class="dot"></span>
-                  </div>
-                </div>
               </div>
 
               <div class="chat-input-bar">
                 <input
-                  v-model="newMessage"
+                  v-model="chatStore.newMessage"
                   type="text"
                   placeholder="Nhập tin nhắn..."
-                  @keyup.enter="sendChatMessage"
-                  :disabled="sending"
+                  @keyup.enter="onSend"
+                  :disabled="chatStore.sending"
                 />
-                <button
-                  class="send-btn"
-                  @click="sendChatMessage"
-                  :disabled="!newMessage.trim() || sending"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    width="16"
-                    height="16"
-                  >
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                <button class="send-btn" @click="onSend"
+                  :disabled="!chatStore.newMessage.trim() || chatStore.sending">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
                   </svg>
                 </button>
               </div>
@@ -341,190 +222,29 @@
   </div>
 </template>
 
-<script>
-import axios from "axios";
+<script setup>
+import { watch, nextTick, ref, onBeforeUnmount } from "vue";
+import { useContactStore } from "@/stores/useContactStore";
+import { useChatStore } from "@/stores/useChatStore";
 
-const API = import.meta.env.VITE_API_BASE || "/api";
+const contactStore = useContactStore();
+const chatStore = useChatStore();
+const messagesArea = ref(null);
 
-export default {
-  name: "ContactPage",
-  data() {
-    return {
-      // Form liên hệ
-      form: { name: "", phone: "", email: "", topic: "", message: "" },
-      errors: {},
-      submitting: false,
-      submitted: false,
-      successMsg: "",
-      apiError: "",
-
-      // Chat
-      chatUser: { name: "", email: "" },
-      chatStarted: false,
-      chatLoading: false,
-      chatError: "",
-      contactId: null,
-      messages: [],
-      newMessage: "",
-      sending: false,
-      agentTyping: false,
-      pollInterval: null,
-      lastMsgId: 0,
-    };
-  },
-  beforeUnmount() {
-    this.stopPolling();
-  },
-  methods: {
-    // ─── FORM ────────────────────────────────────────
-    validate() {
-      this.errors = {};
-      if (!this.form.name.trim()) this.errors.name = "Vui lòng nhập họ tên";
-      if (!this.form.email.trim()) this.errors.email = "Vui lòng nhập email";
-      else if (!/\S+@\S+\.\S+/.test(this.form.email))
-        this.errors.email = "Email không hợp lệ";
-      if (!this.form.topic) this.errors.topic = "Vui lòng chọn chủ đề";
-      if (!this.form.message.trim())
-        this.errors.message = "Vui lòng nhập nội dung";
-      else if (this.form.message.trim().length < 10)
-        this.errors.message = "Nội dung quá ngắn (tối thiểu 10 ký tự)";
-      return Object.keys(this.errors).length === 0;
-    },
-
-    async submitForm() {
-      if (!this.validate()) return;
-      this.submitting = true;
-      this.apiError = "";
-      try {
-        const { data } = await axios.post(`${API}/contacts`, this.form);
-        this.submitted = true;
-        this.successMsg = data.message;
-        this.form = { name: "", phone: "", email: "", topic: "", message: "" };
-        setTimeout(() => {
-          this.submitted = false;
-        }, 6000);
-      } catch (err) {
-        if (err.response?.status === 422) {
-          // Laravel validation errors
-          const laravelErrors = err.response.data.errors || {};
-          Object.keys(laravelErrors).forEach((key) => {
-            this.errors[key] = laravelErrors[key][0];
-          });
-        } else {
-          this.apiError = "Có lỗi xảy ra. Vui lòng thử lại sau.";
-        }
-      } finally {
-        this.submitting = false;
+// Cuộn xuống cuối mỗi khi có tin nhắn mới
+watch(
+  () => chatStore.messages.length,
+  () =>
+    nextTick(() => {
+      if (messagesArea.value) {
+        messagesArea.value.scrollTop = messagesArea.value.scrollHeight;
       }
-    },
+    })
+);
 
-    // ─── CHAT ────────────────────────────────────────
-    async startChat() {
-      if (!this.chatUser.name.trim()) {
-        this.chatError = "Vui lòng nhập tên của bạn.";
-        return;
-      }
-      this.chatError = "";
-      this.chatLoading = true;
-      try {
-        const { data } = await axios.post(`${API}/chat/start`, this.chatUser);
-        this.contactId = data.contact_id;
-        this.messages = [data.welcome];
-        this.lastMsgId = data.welcome.id;
-        this.chatStarted = true;
-        this.startPolling();
-      } catch {
-        this.chatError = "Không thể kết nối. Vui lòng thử lại.";
-      } finally {
-        this.chatLoading = false;
-      }
-    },
+const onSend = () => chatStore.sendMessage();
 
-    async sendChatMessage() {
-      const text = this.newMessage.trim();
-      if (!text || this.sending) return;
-      this.sending = true;
-      const optimistic = {
-        id: Date.now(),
-        sender: "customer",
-        message: text,
-        created_at: new Date().toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      this.messages.push(optimistic);
-      this.newMessage = "";
-      this.scrollBottom();
-      try {
-        const { data } = await axios.post(
-          `${API}/chat/${this.contactId}/messages`,
-          {
-            message: text,
-            sender: "customer",
-            sender_name: this.chatUser.name,
-          }
-        );
-        // Cập nhật optimistic message với real ID
-        const idx = this.messages.findIndex((m) => m.id === optimistic.id);
-        if (idx > -1) this.messages[idx] = data.data;
-        this.lastMsgId = data.data.id;
-      } catch {
-        // Giữ optimistic message nếu lỗi
-      } finally {
-        this.sending = false;
-      }
-    },
-
-    // Polling lấy tin nhắn mới từ admin (mỗi 3 giây)
-    startPolling() {
-      this.pollInterval = setInterval(this.pollMessages, 3000);
-    },
-    stopPolling() {
-      if (this.pollInterval) clearInterval(this.pollInterval);
-    },
-    async pollMessages() {
-      if (!this.contactId) return;
-      try {
-        const { data } = await axios.get(
-          `${API}/chat/${this.contactId}/messages`,
-          {
-            params: { after_id: this.lastMsgId },
-          }
-        );
-        if (data.data && data.data.length > 0) {
-          // Chỉ thêm tin nhắn của admin
-          const adminMsgs = data.data.filter((m) => m.sender === "admin");
-          if (adminMsgs.length > 0) {
-            this.messages.push(...adminMsgs);
-            this.lastMsgId = adminMsgs[adminMsgs.length - 1].id;
-            this.scrollBottom();
-          }
-        }
-      } catch {
-        /* silent fail */
-      }
-    },
-
-    endChat() {
-      this.stopPolling();
-      this.chatStarted = false;
-      this.chatUser = { name: "", email: "" };
-      this.messages = [];
-      this.contactId = null;
-      this.lastMsgId = 0;
-    },
-
-    scrollBottom() {
-      this.$nextTick(() => {
-        if (this.$refs.messagesArea) {
-          this.$refs.messagesArea.scrollTop =
-            this.$refs.messagesArea.scrollHeight;
-        }
-      });
-    },
-  },
-};
+onBeforeUnmount(() => chatStore.stopPolling());
 </script>
 
 <style scoped>
@@ -537,25 +257,12 @@ export default {
   font-family: "Segoe UI", sans-serif;
   background: #f5f7fa;
   min-height: 100vh;
-  color: #1a2332;
 }
 
 .hero-section {
   background: linear-gradient(135deg, #1a2b4a 0%, #2d4a7a 100%);
   padding: 60px 24px 80px;
   text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-.hero-section::before {
-  content: "";
-  position: absolute;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-  top: -100px;
-  right: -100px;
 }
 .hero-badge {
   display: inline-flex;
@@ -926,7 +633,214 @@ export default {
   opacity: 0.7;
   cursor: not-allowed;
 }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.form-group {
+  margin-bottom: 18px;
+}
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+.required {
+  color: #ef4444;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #2563eb;
+}
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: #ef4444;
+}
+.error-msg {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 4px;
+  display: block;
+}
+.form-group textarea {
+  resize: vertical;
+}
 
+.success-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.success-banner svg {
+  width: 20px;
+  height: 20px;
+  color: #16a34a;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.success-banner strong {
+  color: #166534;
+  font-size: 14px;
+  display: block;
+}
+.success-banner p {
+  color: #15803d;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.loading-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Chat */
+.chat-widget {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.chat-intro {
+  padding: 28px;
+}
+.agent-avatars {
+  display: flex;
+  margin-bottom: 8px;
+}
+.agent-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  margin-right: -8px;
+}
+.av1 {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.av2 {
+  background: #fce7f3;
+  color: #be185d;
+}
+.av3 {
+  background: #d1fae5;
+  color: #065f46;
+}
+.agent-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #374151;
+  margin-top: 10px;
+}
+.online-dot {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+}
+.response-time {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 12px 0 24px;
+}
+.chat-start-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chat-start-form input {
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+.chat-start-form input:focus {
+  border-color: #2563eb;
+}
+.start-chat-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #1d4ed8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.start-chat-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 .chat-interface {
   display: flex;
   flex-direction: column;
@@ -1035,37 +949,10 @@ export default {
   margin-top: 4px;
 }
 .message-user .msg-time {
-  text-align: right;
   color: rgba(255, 255, 255, 0.6);
+  text-align: right;
 }
-.typing-bubble {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 14px;
-}
-.dot {
-  width: 6px;
-  height: 6px;
-  background: #9ca3af;
-  border-radius: 50%;
-  animation: bounce 1.2s infinite;
-}
-.dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-@keyframes bounce {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
+
 .chat-input-bar {
   display: flex;
   gap: 8px;
@@ -1097,9 +984,6 @@ export default {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-.send-btn:hover {
-  background: #1e40af;
 }
 .send-btn:disabled {
   background: #93c5fd;
