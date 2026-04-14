@@ -50,7 +50,7 @@ export const useAttributeValues = defineStore("attributeValues", () => {
 
   const createAttributeValue = async (data) => {
     try {
-      const res = await axios.post(`${apiBase}/attribute-value`, data, {
+      const res = await axios.post(`${apiBase}/admin/attribute-value`, data, {
         headers: authHeaders(),
       });
       if (res.status === 200 || res.status === 201) {
@@ -67,7 +67,7 @@ export const useAttributeValues = defineStore("attributeValues", () => {
 
   const updateAttributeValue = async (id, data) => {
     try {
-      const res = await axios.put(`${apiBase}/attribute-value/${id}`, data, {
+      const res = await axios.put(`${apiBase}/admin/attribute-value/${id}`, data, {
         headers: authHeaders(),
       });
       if (res.status === 200) {
@@ -88,7 +88,7 @@ export const useAttributeValues = defineStore("attributeValues", () => {
     if (!confirmed) return false;
 
     try {
-      const res = await axios.delete(`${apiBase}/attribute-value/${id}`, {
+      const res = await axios.delete(`${apiBase}/admin/attribute-value/${id}`, {
         headers: authHeaders(),
       });
       if (res.status === 200) {

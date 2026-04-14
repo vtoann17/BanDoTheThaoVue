@@ -50,7 +50,7 @@ export const useVariants = defineStore("variants", () => {
 
   const createVariant = async (data) => {
     try {
-      const res = await axios.post(`${apiBase}/variant`, data, {
+      const res = await axios.post(`${apiBase}/admin/variant`, data, {
         headers: {
           ...authHeaders(),
           "Content-Type": "multipart/form-data",
@@ -72,7 +72,7 @@ export const useVariants = defineStore("variants", () => {
 
   const updateVariant = async (id, data) => {
     try {
-      const res = await axios.post(`${apiBase}/variant/${id}`, data, {
+      const res = await axios.post(`${apiBase}/admin/variant/${id}`, data, {
         headers: authHeaders(),
       });
       if (res.status === 200) {

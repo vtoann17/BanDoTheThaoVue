@@ -43,7 +43,7 @@ export const useReviews = defineStore("reviews", () => {
   // Thêm
   const createReview = async (formData) => {
     try {
-      const res = await axios.post(`${apiBase}/reviews`, formData, {
+      const res = await axios.post(`${apiBase}/admin/reviews`, formData, {
         headers: {
           ...authHeaders(),
           "Content-Type": "multipart/form-data",
@@ -67,7 +67,7 @@ export const useReviews = defineStore("reviews", () => {
     try {
       formData.append("_method", "PUT");
 
-      const res = await axios.post(`${apiBase}/reviews/${id}`, formData, {
+      const res = await axios.post(`${apiBase}/admin/reviews/${id}`, formData, {
         headers: {
           ...authHeaders(),
           "Content-Type": "multipart/form-data",
@@ -97,7 +97,7 @@ export const useReviews = defineStore("reviews", () => {
     if (!confirmed) return false;
 
     try {
-      const res = await axios.delete(`${apiBase}/reviews/${id}`, {
+      const res = await axios.delete(`${apiBase}/admin/reviews/${id}`, {
         headers: authHeaders(),
       });
 

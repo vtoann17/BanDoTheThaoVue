@@ -39,7 +39,7 @@ export const useCategories = defineStore("categories", () => {
 
   const createCategory = async (formData) => {
   try {
-    const res = await axios.post(`${apiBase}/categories`, formData, {
+    const res = await axios.post(`${apiBase}/admin/categories`, formData, {
       headers: {
         ...authHeaders(),
         "Content-Type": "multipart/form-data",
@@ -64,7 +64,7 @@ export const useCategories = defineStore("categories", () => {
     try {
       formData.append("_method", "PUT");
 
-      const res = await axios.post(`${apiBase}/categories/${id}`, formData, {
+      const res = await axios.post(`${apiBase}/admin/categories/${id}`, formData, {
         headers: {
           ...authHeaders(),
           "Content-Type": "multipart/form-data",
@@ -94,7 +94,7 @@ export const useCategories = defineStore("categories", () => {
     if (!confirmed) return false;
 
     try {
-      const res = await axios.delete(`${apiBase}/categories/${id}`, {
+      const res = await axios.delete(`${apiBase}/admin/categories/${id}`, {
         headers: authHeaders(),
       });
 

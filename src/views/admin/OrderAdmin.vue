@@ -703,12 +703,14 @@ const paymentStatusClass = (s) =>
   border-radius: 10px;
   overflow: hidden;
   background-color: #fff;
+  overflow-x: auto;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 900px;
 }
 
 .data-table th {
@@ -720,6 +722,7 @@ const paymentStatusClass = (s) =>
   letter-spacing: 0.06em;
   background-color: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
+  padding: 14px 10px;
 }
 
 .data-table td {
@@ -728,6 +731,7 @@ const paymentStatusClass = (s) =>
   color: #111827;
   border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
+  padding: 14px 10px;
 }
 
 .data-table tbody tr:last-child td {

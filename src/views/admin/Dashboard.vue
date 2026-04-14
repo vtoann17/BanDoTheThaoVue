@@ -54,7 +54,7 @@ const fetchDashboardData = async () => {
   const token = auth.value?.token;
   
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE}/dashboard?period=${chartFilter.value}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE}/admin/dashboard?period=${chartFilter.value}`, {
       headers: { 
         "Authorization": `Bearer ${token}`,
         "Accept": "application/json"

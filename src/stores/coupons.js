@@ -27,7 +27,7 @@ export const useCoupons = defineStore("coupons", () => {
 
     const createCoupon = async (formData) => {
         try {
-            const res = await axios.post(`${apiBase}/coupons`, formData, {
+            const res = await axios.post(`${apiBase}/admin/coupons`, formData, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "application/json",
@@ -47,7 +47,7 @@ export const useCoupons = defineStore("coupons", () => {
 
     const updateCoupon = async (id, payload) => {
         try {
-            const res = await axios.put(`${apiBase}/coupons/${id}`, payload, {
+            const res = await axios.put(`${apiBase}/admin/coupons/${id}`, payload, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "application/json",
@@ -89,7 +89,7 @@ export const useCoupons = defineStore("coupons", () => {
         if (!confirmed) return false;
 
         try {
-            const res = await axios.delete(`${apiBase}/coupons/${id}`, {
+            const res = await axios.delete(`${apiBase}/admin/coupons/${id}`, {
                 headers: authHeaders(),
             });
             if (res.status === 200 || res.status === 204) {
