@@ -11,6 +11,7 @@ import IndexView from '../views/index.vue'
 import ProductView from '@/views/ProductView.vue'
 import ProductdetailView from '@/views/ProductdetailView.vue'
 import Cart from "@/views/Cart.vue"
+import ViewCoupon from '@/views/ViewCoupon.vue'
 import Checkout from '@/views/Checkout.vue'
 import ProductAdmin from '@/views/admin/products/ProductAdmin.vue'
 import ProductAdd from '@/views/admin/products/ProductAdd.vue'
@@ -370,6 +371,11 @@ const router = createRouter({
       path: "/auth/resetpassword", // đường dẫn URL
       name: "resetpassword",
       component: ResetPassword, // component bạn tạo
+    },
+    {
+      path: "/couponview", // đường dẫn URL
+      name: "couponview",
+      component: ViewCoupon, // component bạn tạo
     },
     {
       path: '/about',
