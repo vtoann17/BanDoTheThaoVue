@@ -426,7 +426,16 @@ onBeforeUnmount(() => {
 .from-admin { flex-direction: row-reverse; }
 .thread-avatar { width: 28px; height: 28px; border-radius: 50%; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .thread-avatar.admin{background:#1e3a8a;color:#fff} .thread-avatar.customer{background:#f1f5f9;color:#475569}
-.thread-bubble { max-width: 72%; }
+.thread-bubble { max-width: 100%; }
+.thread-bubble {
+  max-width: 85%;
+}
+
+.thread-bubble p {
+  font-size: 14px; /* chữ to hơn */
+  padding: 12px 16px; /* box to hơn */
+  border-radius: 14px; /* bo tròn đẹp hơn */
+}
 .thread-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .from-admin .thread-meta { flex-direction: row-reverse; }
 .thread-sender { font-size: 11px; font-weight: 600; color: #374151; }
