@@ -73,12 +73,11 @@ const sortLabel = computed(
     )?.label ?? "Mới nhất"
 );
 
-// 3. SỬA: HÀM FETCH GỬI ĐỦ THAM SỐ LÊN BACKEND
 const fetchProducts = async () => {
   loading.value = true;
 
   const params = {
-    per_page: 20,
+    per_page: 8,
     page: currentPage.value,
     sort_by: sortBy.value,
     sort_dir: sortDir.value,
@@ -108,7 +107,6 @@ onMounted(async () => {
     expandedCats.value.add(selectedCategoryId.value);
 });
 
-// 4. SỬA: WATCH URL ĐỂ CẬP NHẬT TRẠNG THÁI LỌC
 watch(
   () => route.query,
   (q) => {
@@ -148,7 +146,6 @@ const applyFilter = () => {
   router.push({ query: buildQuery() });
 };
 
-// 5. GIỮ NGUYÊN: CÁC HÀM TOGGLE, SELECT...
 const toggleCategory = (catId) => {
   const s = new Set(expandedCats.value);
   s.has(catId) ? s.delete(catId) : s.add(catId);

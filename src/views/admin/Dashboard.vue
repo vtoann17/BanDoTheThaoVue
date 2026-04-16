@@ -243,7 +243,7 @@ onMounted(fetchDashboardData);
       <div class="orders-card">
         <div class="orders-header">
           <h3>Đơn hàng gần đây</h3>
-          <router-link to="/orders" class="view-all">Xem tất cả</router-link>
+          <router-link to="/orderadmin" class="view-all">Xem tất cả</router-link>
         </div>
         <div class="table-responsive">
           <table class="orders-table">

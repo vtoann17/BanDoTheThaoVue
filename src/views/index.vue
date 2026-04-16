@@ -58,7 +58,7 @@ onMounted(() => {
         <div class="section-header">
           <div class="title-wrap"></div>
         </div>
-        <ProductList />
+        <ProductList :per-page="4" />
       </section>
 
       <section class="home-section">
