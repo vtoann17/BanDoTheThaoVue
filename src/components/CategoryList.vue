@@ -1,4 +1,3 @@
-
 <script setup>
 import { onMounted, ref } from "vue";
 import { useCategories } from "@/stores/categories";
@@ -7,7 +6,7 @@ import { storeToRefs } from "pinia";
 const store = useCategories();
 const { categories } = storeToRefs(store);
 const baseUrl = import.meta.env.VITE_API_BASE.replace("/api", "");
-const loading = ref(true); // ✅ thêm loading
+const loading = ref(true);
 
 onMounted(async () => {
   loading.value = true;
@@ -23,11 +22,11 @@ onMounted(async () => {
         <h2 class="section-title">Danh Mục Sản Phẩm</h2>
         <div class="title-bar"></div>
       </div>
-      <a href="#" class="see-all">Xem tất cả &nbsp;→</a>
+      <a href="/product" class="see-all">Xem tất cả &nbsp;→</a>
     </div>
 
     <div class="categories-grid">
-      <!-- ✅ Skeleton categories -->
+      <!-- Skeleton categories -->
       <template v-if="loading">
         <div v-for="i in 6" :key="i" class="cat-card skeleton">
           <div class="skel-circle"></div>
@@ -39,7 +38,7 @@ onMounted(async () => {
         <a
           v-for="cat in categories"
           :key="cat.id"
-          :href="`/product?category=${cat.slug}`"
+          :href="`/product?category_id=${cat.id}`"
           class="cat-card"
         >
           <div class="cat-icon-wrap">
@@ -62,7 +61,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* giữ nguyên style cũ, thêm skeleton */
 .categories-section {
   border-top: 1px solid #e5e7eb;
   border-bottom: 1px solid #e5e7eb;
@@ -164,7 +162,7 @@ onMounted(async () => {
   transform: translateX(0);
 }
 
-/* ✅ Skeleton styles */
+/* Skeleton styles */
 .skeleton {
   pointer-events: none;
 }

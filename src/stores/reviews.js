@@ -43,7 +43,7 @@ export const useReviews = defineStore("reviews", () => {
   // Thêm
   const createReview = async (formData) => {
     try {
-      const res = await axios.post(`${apiBase}/admin/reviews`, formData, {
+      const res = await axios.post(`${apiBase}/reviews`, formData, {
         headers: {
           ...authHeaders(),
           "Content-Type": "multipart/form-data",

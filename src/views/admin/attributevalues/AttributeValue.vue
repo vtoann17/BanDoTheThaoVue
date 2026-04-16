@@ -2,19 +2,21 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import AdminLayout from "../../../layouts/AdminLayout.vue";
-import { useAttributeValues } from "@/stores/attributeValues";
+import { useAttributeValues } from "../../../stores/attributevalues";
 import { useAttributes } from "@/stores/attributes";
+import { useNotify } from "@/composables/useNotify"; // Import useNotify
 
 const router = useRouter();
 const attributeValueStore = useAttributeValues();
 const attributeStore = useAttributes();
+const notify = useNotify(); // Khởi tạo notify
 
 const search = ref("");
 const sortValue = ref("id|desc");
 const sortKey = ref("id");
 const sortDir = ref("desc");
 const currentPage = ref(1);
-const perPage = 10;
+const perPage = 5;
 const filterAttributeId = ref("");
 
 async function fetchData() {
@@ -22,8 +24,8 @@ async function fetchData() {
     search: search.value,
     sort_by: sortKey.value,
     sort_dir: sortDir.value,
-    per_page: perPage,
-    page: currentPage.value,
+    per_page: 999, // load nhiều để group phía client
+    page: 1,
     attribute_id: filterAttributeId.value || undefined,
   });
 }
@@ -57,51 +59,58 @@ function onFilterChange() {
   fetchData();
 }
 
-function toggleSort(key) {
-  if (sortKey.value === key) {
-    sortDir.value = sortDir.value === "asc" ? "desc" : "asc";
-  } else {
-    sortKey.value = key;
-    sortDir.value = "asc";
+// Group các giá trị theo thuộc tính
+const groupedByAttribute = computed(() => {
+  const map = new Map();
+  for (const item of attributeValueStore.attributeValues) {
+    const attrId = item.attribute?.id ?? "unknown";
+    if (!map.has(attrId)) {
+      map.set(attrId, { attribute: item.attribute, values: [] });
+    }
+    map.get(attrId).values.push(item);
   }
-  sortValue.value = `${sortKey.value}|${sortDir.value}`;
-  currentPage.value = 1;
-  fetchData();
-}
+  return [...map.values()];
+});
 
-function sortIcon(key) {
-  if (sortKey.value !== key) return "↕";
-  return sortDir.value === "asc" ? "↑" : "↓";
-}
-
-function goPage(p) {
-  if (p < 1 || p > attributeValueStore.lastPage) return;
-  currentPage.value = p;
-}
-
+// Pagination trên grouped rows
+const totalGroups = computed(() => groupedByAttribute.value.length);
+const lastPage = computed(() =>
+  Math.max(1, Math.ceil(totalGroups.value / perPage))
+);
+const pagedGroups = computed(() => {
+  const start = (currentPage.value - 1) * perPage;
+  return groupedByAttribute.value.slice(start, start + perPage);
+});
+const rangeStart = computed(() =>
+  totalGroups.value === 0 ? 0 : (currentPage.value - 1) * perPage + 1
+);
+const rangeEnd = computed(() =>
+  Math.min(currentPage.value * perPage, totalGroups.value)
+);
 const pageNumbers = computed(() => {
   const pages = [];
-  for (let i = 1; i <= attributeValueStore.lastPage; i++) pages.push(i);
+  for (let i = 1; i <= lastPage.value; i++) pages.push(i);
   return pages;
 });
 
-const rangeStart = computed(() =>
-  attributeValueStore.total === 0 ? 0 : (currentPage.value - 1) * perPage + 1
-);
-const rangeEnd = computed(() =>
-  Math.min(currentPage.value * perPage, attributeValueStore.total)
-);
+function goPage(p) {
+  if (p < 1 || p > lastPage.value) return;
+  currentPage.value = p;
+}
 
+// Hàm XÓA LẺ từng giá trị
 async function handleDelete(id) {
   const ok = await attributeValueStore.deleteAttributeValue(id);
-  if (ok) fetchData();
+  if (ok) {
+    fetchData(); // Load lại bảng sau khi xóa thành công
+  }
 }
 
 function goToAdd() {
   router.push("/attributevalueadd");
 }
-function goToEdit(id) {
-  router.push(`/attributevalueedit/${id}`);
+function goToEdit(attributeId) {
+  router.push(`/attributevalueedit/${attributeId}`);
 }
 </script>
 
@@ -150,7 +159,6 @@ function goToEdit(id) {
           />
         </div>
 
-        <!-- Filter theo thuộc tính -->
         <div class="filter-select-box">
           <select
             class="filter-select"
@@ -181,7 +189,6 @@ function goToEdit(id) {
           </svg>
         </div>
 
-        <!-- Sort -->
         <div class="filter-select-box">
           <select
             class="filter-select"
@@ -213,32 +220,15 @@ function goToEdit(id) {
         <table class="product-table">
           <thead>
             <tr>
-              <th
-                class="sortable"
-                @click="toggleSort('id')"
-                style="width: 80px"
-              >
-                ID
-                <span
-                  class="sort-icon"
-                  :style="{ color: sortKey === 'id' ? '#2563eb' : '' }"
-                  >{{ sortIcon("id") }}</span
-                >
-              </th>
-              <th>THUỘC TÍNH</th>
-              <th class="sortable" @click="toggleSort('value')">
-                GIÁ TRỊ
-                <span
-                  class="sort-icon"
-                  :style="{ color: sortKey === 'value' ? '#2563eb' : '' }"
-                  >{{ sortIcon("value") }}</span
-                >
-              </th>
-              <th class="text-right">THAO TÁC</th>
+              <th style="width: 60px">#</th>
+              <th style="width: 180px">THUỘC TÍNH</th>
+              <th>GIÁ TRỊ</th>
+              <th class="text-right" style="width: 60px">SL</th>
+              <th class="text-right" style="width: 80px">THAO TÁC</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-if="attributeValueStore.attributeValues.length === 0">
+            <tr v-if="pagedGroups.length === 0">
               <td
                 colspan="5"
                 style="text-align: center; padding: 48px 0; color: #9ca3af"
@@ -263,44 +253,68 @@ function goToEdit(id) {
               </td>
             </tr>
 
-            <tr
-              v-for="item in attributeValueStore.attributeValues"
-              :key="item.id"
-            >
-              <td class="font-medium text-gray">#{{ item.id }}</td>
+            <tr v-for="group in pagedGroups" :key="group.attribute?.id">
+              <td class="font-medium text-gray">
+                {{ group.attribute?.id ?? "—" }}
+              </td>
               <td>
                 <span class="attr-badge">{{
-                  item.attribute?.name ?? "—"
+                  group.attribute?.name ?? "—"
                 }}</span>
               </td>
-              <td class="font-semibold">{{ item.value }}</td>
-              <td class="col-actions">
-                <div class="actions-wrapper">
-                  <button
-                    class="btn-action edit"
-                    @click="goToEdit(item.id)"
-                    title="Sửa"
+              <td>
+                <div class="chips-wrap">
+                  <span
+                    v-for="v in group.values"
+                    :key="v.id"
+                    class="value-chip"
                   >
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {{ v.value }}
+                    <button
+                      class="chip-btn delete"
+                      @click="handleDelete(v.id)"
+                      title="Xóa giá trị này"
+                    >
+                      <svg
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        width="12"
+                        height="12"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+              </td>
+              <td class="text-right">
+                <span class="count-badge">{{ group.values.length }}</span>
+              </td>
+              <td class="text-right">
+                <div class="action-flex">
+                  <button
+                    class="action-btn edit"
+                    @click="goToEdit(group.attribute?.id)"
+                    title="Cập nhật nhóm"
+                  >
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                    >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    class="btn-action delete"
-                    @click="handleDelete(item.id)"
-                    title="Xóa"
-                  >
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                       />
                     </svg>
                   </button>
@@ -314,7 +328,7 @@ function goToEdit(id) {
       <div class="pagination">
         <span class="pagination-info">
           Hiển thị {{ rangeStart }} - {{ rangeEnd }} trong tổng số
-          {{ attributeValueStore.total }} giá trị
+          {{ totalGroups }} thuộc tính
         </span>
         <div class="pagination-pages">
           <button
@@ -342,7 +356,7 @@ function goToEdit(id) {
           </button>
           <button
             class="page-btn"
-            :class="{ disabled: currentPage === attributeValueStore.lastPage }"
+            :class="{ disabled: currentPage === lastPage }"
             @click="goPage(currentPage + 1)"
           >
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -498,25 +512,12 @@ function goToEdit(id) {
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
   user-select: none;
-  cursor: default;
-}
-.product-table th.sortable {
-  cursor: pointer;
-}
-.product-table th.sortable:hover {
-  color: #374151;
-}
-.sort-icon {
-  display: inline-block;
-  margin-left: 4px;
-  font-size: 12px;
 }
 .product-table td {
   padding: 14px 24px;
   border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
   font-size: 14px;
-  white-space: nowrap;
 }
 .product-table tbody tr:last-child td {
   border-bottom: none;
@@ -527,10 +528,6 @@ function goToEdit(id) {
 
 .font-medium {
   font-weight: 500;
-}
-.font-semibold {
-  font-weight: 600;
-  color: #111827;
 }
 .text-gray {
   color: #6b7280;
@@ -548,33 +545,73 @@ function goToEdit(id) {
   font-weight: 600;
 }
 
-.actions-wrapper {
+.count-badge {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Chips với nút xóa bên trong */
+.chips-wrap {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0;
+}
+.value-chip {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 4px 8px 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
 }
-.btn-action {
+.chip-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 7px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #9ca3af;
+  transition: all 0.15s;
+}
+.chip-btn.delete:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* Action Buttons ở cột cuối */
+.action-flex {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 6px;
   color: #9ca3af;
-  transition: background 0.2s, color 0.2s;
+  transition: all 0.2s;
 }
-.btn-action.edit:hover {
-  background: #eff6ff;
+.action-btn.edit:hover {
   color: #2563eb;
-}
-.btn-action.delete:hover {
-  background: #fef2f2;
-  color: #ef4444;
-}
-.btn-action svg {
-  width: 18px;
-  height: 18px;
-  display: block;
+  background: #eff6ff;
 }
 
 .empty-state {

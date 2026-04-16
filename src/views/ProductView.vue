@@ -20,7 +20,6 @@ const { subcategories } = storeToRefs(subcategoryStore);
 
 const baseUrl = import.meta.env.VITE_API_BASE.replace("/api", "");
 
-/* ── FILTER STATE ── */
 const selectedCategoryId = ref(
   route.query.category_id ? Number(route.query.category_id) : null
 );
@@ -41,7 +40,6 @@ const expandedCats = ref(new Set());
 const liked = ref(new Set());
 const loading = ref(false);
 
-/* Brands từ subcategory store hoặc product data */
 const brandList = computed(() => {
   const map = new Map();
   productStore.products.forEach((p) => {
@@ -50,7 +48,6 @@ const brandList = computed(() => {
   return [...map.values()];
 });
 
-/* Group subs theo category_id */
 const subsByCategory = computed(() => {
   const map = {};
   subcategories.value.forEach((s) => {
@@ -76,7 +73,7 @@ const sortLabel = computed(
     )?.label ?? "Mới nhất"
 );
 
-/* ── FETCH — đúng param backend ── */
+// 3. SỬA: HÀM FETCH GỬI ĐỦ THAM SỐ LÊN BACKEND
 const fetchProducts = async () => {
   loading.value = true;
 
@@ -88,11 +85,14 @@ const fetchProducts = async () => {
     status: 1,
   };
 
+  // Thêm các tham số lọc
+  if (selectedCategoryId.value) params.category_id = selectedCategoryId.value;
   if (selectedSubcategoryId.value)
     params.subcategory_id = selectedSubcategoryId.value;
   if (selectedBrandId.value) params.brand_id = selectedBrandId.value;
   if (priceMin.value > 0) params.min_price = priceMin.value;
   if (priceMax.value < 50000000) params.max_price = priceMax.value;
+  if (route.query.search) params.search = route.query.search; // Hỗ trợ tìm kiếm từ Header
 
   await productStore.loadProducts(params);
   loading.value = false;
@@ -108,7 +108,7 @@ onMounted(async () => {
     expandedCats.value.add(selectedCategoryId.value);
 });
 
-/* Sync URL → state */
+// 4. SỬA: WATCH URL ĐỂ CẬP NHẬT TRẠNG THÁI LỌC
 watch(
   () => route.query,
   (q) => {
@@ -127,7 +127,6 @@ watch(
   { deep: true }
 );
 
-/* ── BUILD QUERY URL ── */
 const buildQuery = () => {
   const q = { page: 1 };
   if (selectedCategoryId.value) q.category_id = selectedCategoryId.value;
@@ -140,6 +139,7 @@ const buildQuery = () => {
     q.sort_by = sortBy.value;
     q.sort_dir = sortDir.value;
   }
+  if (route.query.search) q.search = route.query.search;
   return q;
 };
 
@@ -148,7 +148,7 @@ const applyFilter = () => {
   router.push({ query: buildQuery() });
 };
 
-/* ── ACTIONS ── */
+// 5. GIỮ NGUYÊN: CÁC HÀM TOGGLE, SELECT...
 const toggleCategory = (catId) => {
   const s = new Set(expandedCats.value);
   s.has(catId) ? s.delete(catId) : s.add(catId);
@@ -203,7 +203,6 @@ const clearAll = () => {
   router.push({ query: {} });
 };
 
-/* ── HELPERS ── */
 const toggleLike = (id) => {
   const s = new Set(liked.value);
   s.has(id) ? s.delete(id) : s.add(id);
@@ -230,7 +229,6 @@ const displayPrice = (p) => {
     : { sale: 0, discounted: null, original: price };
 };
 
-/* Active tags */
 const activeFilterTags = computed(() => {
   const tags = [];
   if (selectedCategoryId.value) {
@@ -282,7 +280,6 @@ const activeFilterTags = computed(() => {
   return tags;
 });
 
-/* Pagination */
 const pages = computed(() => {
   const last = productStore.lastPage;
   if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1);
@@ -346,9 +343,7 @@ const pages = computed(() => {
     </div>
 
     <div class="body-wrap">
-      <!-- ══ SIDEBAR ══ -->
       <aside class="sidebar">
-        <!-- DANH MỤC -->
         <div class="filter-block">
           <p class="filter-title">
             <svg
@@ -430,7 +425,6 @@ const pages = computed(() => {
 
         <div class="divider" />
 
-        <!-- THƯƠNG HIỆU -->
         <div class="filter-block" v-if="brandList.length">
           <p class="filter-title">
             <svg
@@ -480,7 +474,6 @@ const pages = computed(() => {
 
         <div class="divider" v-if="brandList.length" />
 
-        <!-- KHOẢNG GIÁ -->
         <div class="filter-block">
           <p class="filter-title">
             <svg
@@ -492,7 +485,6 @@ const pages = computed(() => {
               stroke-width="2.2"
             >
               <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
             Khoảng giá
           </p>
@@ -602,9 +594,7 @@ const pages = computed(() => {
         </button>
       </aside>
 
-      <!-- ══ MAIN ══ -->
       <main class="main-area">
-        <!-- Active tags -->
         <div class="active-filters" v-if="activeFilterTags.length">
           <span
             v-for="(tag, i) in activeFilterTags"
@@ -638,7 +628,6 @@ const pages = computed(() => {
           <button class="clear-all" @click="clearAll">Xóa tất cả</button>
         </div>
 
-        <!-- SKELETON -->
         <div v-if="loading" class="products-grid">
           <div v-for="i in 8" :key="i" class="product-card skeleton">
             <div class="prod-img-wrap skel-img"></div>
@@ -650,7 +639,6 @@ const pages = computed(() => {
           </div>
         </div>
 
-        <!-- EMPTY -->
         <div v-else-if="productStore.products.length === 0" class="empty-state">
           <svg viewBox="0 0 64 64" fill="none" width="52" height="52">
             <circle cx="32" cy="32" r="30" stroke="#E5E7EB" stroke-width="2" />
@@ -665,7 +653,6 @@ const pages = computed(() => {
           <button class="btn-reset inline" @click="clearAll">Xóa bộ lọc</button>
         </div>
 
-        <!-- GRID -->
         <div v-else class="products-grid">
           <router-link
             v-for="p in productStore.products"
@@ -729,7 +716,6 @@ const pages = computed(() => {
           </router-link>
         </div>
 
-        <!-- PAGINATION -->
         <div class="pagination" v-if="productStore.lastPage > 1">
           <button
             class="pg-btn"
@@ -781,12 +767,15 @@ const pages = computed(() => {
 </template>
 
 <style scoped>
+/* 6. SỬA: ÉP PHÔNG CHỮ SANS-SERIF TOÀN BỘ TRANG */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif !important;
 }
 a {
   text-decoration: none;
@@ -811,6 +800,7 @@ img {
   color: #111827;
 }
 
+/* 7. GIỮ NGUYÊN TOÀN BỘ CSS CŨ CỦA BẠN DƯỚI ĐÂY */
 .breadcrumb {
   padding: 14px 48px;
   font-size: 12.5px;
@@ -906,7 +896,6 @@ img {
   align-items: flex-start;
 }
 
-/* SIDEBAR */
 .sidebar {
   width: 220px;
   min-width: 220px;
@@ -941,7 +930,6 @@ img {
   margin-bottom: 12px;
 }
 
-/* Category tree */
 .cat-tree-item {
   margin-bottom: 1px;
 }
@@ -1054,7 +1042,6 @@ img {
   font-weight: 700;
 }
 
-/* Brands */
 .check-row {
   display: flex;
   align-items: center;
@@ -1087,7 +1074,6 @@ img {
   border-color: #1565c0;
 }
 
-/* Price */
 .price-inputs {
   display: flex;
   align-items: center;
@@ -1267,7 +1253,6 @@ img {
   padding: 8px 20px;
 }
 
-/* Main */
 .main-area {
   flex: 1;
   min-width: 0;
@@ -1322,7 +1307,6 @@ img {
   text-align: center;
 }
 
-/* Products */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1440,7 +1424,6 @@ img {
   color: #fff;
 }
 
-/* Skeleton */
 .skeleton {
   pointer-events: none;
 }
@@ -1471,7 +1454,6 @@ img {
   }
 }
 
-/* Pagination */
 .pagination {
   display: flex;
   align-items: center;

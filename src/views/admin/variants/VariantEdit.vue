@@ -1,16 +1,18 @@
 <script setup>
-import { reactive, ref, onMounted, computed } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import AdminLayout from "../../../layouts/AdminLayout.vue";
 import { useVariants } from "../../../stores/variants";
 import { useProducts } from "../../../stores/products";
-import { useAttributeValues } from "../../../stores/attributeValues";
+import { useAttributeValues } from "../../../stores/attributevalues";
+import { useAttributes } from "@/stores/attributes";
 
 const router = useRouter();
 const route = useRoute();
 const variantStore = useVariants();
 const productStore = useProducts();
 const attributeValueStore = useAttributeValues();
+const attributeStore = useAttributes();
 const apiBase = import.meta.env.VITE_API_BASE;
 
 const variantId = route.params.id;
@@ -23,7 +25,8 @@ const form = reactive({
   sale: "0",
   start: "",
   end: "",
-  attribute_values: [],
+  // Dùng cấu trúc mảng động giống form Thêm
+  selected_attributes: [{ attribute_id: "", value_ids: [], error: "" }],
 });
 
 const errors = reactive({
@@ -50,6 +53,7 @@ onMounted(async () => {
   await Promise.all([
     productStore.loadProducts({ per_page: 999 }),
     attributeValueStore.loadAttributeValues({ per_page: 999 }),
+    attributeStore.loadAttributes({ per_page: 999 }),
   ]);
 
   const variant = await variantStore.getVariant(variantId);
@@ -61,19 +65,40 @@ onMounted(async () => {
     form.sale = variant.sale ?? "0";
     form.start = toDatetimeLocal(variant.start);
     form.end = toDatetimeLocal(variant.end);
-    form.attribute_values = Array.isArray(variant.attribute_values)
-      ? variant.attribute_values.map((av) =>
-          typeof av === "object" ? av.id : av
-        )
-      : [];
+    
     existingImage.value = variant.img ?? "";
     if (variant.img) {
       imagePreview.value = imageUrl(variant.img);
+    }
+
+    // Convert dữ liệu cũ sang cấu trúc mảng mới để hiển thị checkbox
+    const existingVals = variant.values || variant.attribute_values || [];
+    if (existingVals.length > 0) {
+      const grouped = {};
+      existingVals.forEach(v => {
+        const valId = typeof v === 'object' ? v.id : v;
+        const found = attributeValueStore.attributeValues.find(av => av.id === valId);
+        if (found) {
+          const attrId = found.attribute_id;
+          if (!grouped[attrId]) grouped[attrId] = [];
+          grouped[attrId].push(valId);
+        }
+      });
+
+      const rows = Object.keys(grouped).map(attrId => ({
+        attribute_id: Number(attrId),
+        value_ids: grouped[attrId],
+        error: ""
+      }));
+      form.selected_attributes = rows.length > 0 ? rows : [{ attribute_id: "", value_ids: [], error: "" }];
+    } else {
+      form.selected_attributes = [{ attribute_id: "", value_ids: [], error: "" }];
     }
   }
 
   pageLoading.value = false;
 });
+
 function imageUrl(path) {
   if (!path) return null;
   if (path.startsWith("http")) return path;
@@ -106,10 +131,21 @@ function removeImage() {
   if (fileInput.value) fileInput.value.value = "";
 }
 
-function toggleAttributeValue(id) {
-  const idx = form.attribute_values.indexOf(id);
-  if (idx === -1) form.attribute_values.push(id);
-  else form.attribute_values.splice(idx, 1);
+function addAttrRow() {
+  form.selected_attributes.push({ attribute_id: "", value_ids: [], error: "" });
+}
+
+function removeAttrRow(index) {
+  if (form.selected_attributes.length > 1) {
+    form.selected_attributes.splice(index, 1);
+  }
+}
+
+function getValuesForAttribute(attrId) {
+  if (!attrId) return [];
+  return attributeValueStore.attributeValues.filter(
+    (v) => v.attribute_id === Number(attrId)
+  );
 }
 
 function validate() {
@@ -136,7 +172,23 @@ function validate() {
     errors.price = "Giá không hợp lệ";
     ok = false;
   }
-  if (form.attribute_values.length === 0) {
+
+  const selectedAttrIds = [];
+  form.selected_attributes.forEach((row) => {
+    row.error = "";
+    if (!row.attribute_id || row.value_ids.length === 0) {
+      row.error = "Vui lòng chọn thuộc tính và ít nhất MỘT giá trị";
+      ok = false;
+    } else {
+      if (selectedAttrIds.includes(row.attribute_id)) {
+        row.error = "Thuộc tính này bị trùng, vui lòng gộp lại chung 1 dòng";
+        ok = false;
+      }
+      selectedAttrIds.push(row.attribute_id);
+    }
+  });
+
+  if (form.selected_attributes.length === 0) {
     errors.attribute_values = "Vui lòng chọn ít nhất một giá trị thuộc tính";
     ok = false;
   }
@@ -147,24 +199,22 @@ function validate() {
 async function submitForm() {
   if (!validate()) return;
 
-  const payload = {
-    product_id: form.product_id,
-    sku: form.sku.trim(),
-    stock: form.stock,
-    price: form.price,
-    sale: form.sale || 0,
-    start: form.start || null,
-    end: form.end || null,
-    attribute_values: form.attribute_values,
-  };
-  const fd = new FormData();
-  Object.entries(payload).forEach(([key, val]) => {
-    if (Array.isArray(val)) {
-      val.forEach((v) => fd.append(`${key}[]`, v));
-    } else if (val !== null && val !== undefined) {
-      fd.append(key, val);
-    }
+  // Gom phẳng mảng các giá trị được chọn để gửi về Backend
+  const flatValues = [];
+  form.selected_attributes.forEach(row => {
+    flatValues.push(...row.value_ids);
   });
+
+  const fd = new FormData();
+  fd.append("product_id", form.product_id);
+  fd.append("sku", form.sku.trim());
+  fd.append("stock", form.stock);
+  fd.append("price", form.price);
+  fd.append("sale", form.sale || 0);
+  if (form.start) fd.append("start", form.start);
+  if (form.end) fd.append("end", form.end);
+
+  flatValues.forEach(v => fd.append("attribute_values[]", v));
 
   fd.append("_method", "PUT"); 
 
@@ -175,28 +225,18 @@ async function submitForm() {
   loading.value = true;
   const result = await variantStore.updateVariant(variantId, fd);
   loading.value = false;
+  
   if (result) goBack();
 }
 
 function goBack() {
   router.push(`/variantadmin/${form.product_id}`);
 }
-
-const groupedValues = computed(() => {
-  const groups = {};
-  for (const val of attributeValueStore.attributeValues || []) {
-    const attrName = val.attribute?.name || "Khác";
-    if (!groups[attrName]) groups[attrName] = [];
-    groups[attrName].push(val);
-  }
-  return groups;
-});
 </script>
 
 <template>
   <AdminLayout>
     <div class="page-content">
-      <!-- Breadcrumb -->
       <nav class="breadcrumb">
         <RouterLink
           v-if="form.product_id"
@@ -221,7 +261,6 @@ const groupedValues = computed(() => {
         <span class="breadcrumb-current">Chỉnh sửa biến thể</span>
       </nav>
 
-      <!-- Page loading skeleton -->
       <div v-if="pageLoading" class="skeleton-wrapper">
         <div class="skeleton skeleton-header"></div>
         <div class="form-grid">
@@ -264,12 +303,10 @@ const groupedValues = computed(() => {
         </div>
 
         <div class="form-grid">
-          <!-- Cột trái -->
           <div class="form-col-left">
             <div class="card">
-              <h3 class="card-title">Thông tin biến thể</h3>
+              <h3 class="card-title">Thông tin cơ bản</h3>
 
-              <!-- Sản phẩm -->
               <div class="form-group">
                 <label>Sản phẩm *</label>
                 <div class="select-wrapper">
@@ -306,7 +343,6 @@ const groupedValues = computed(() => {
                 </p>
               </div>
 
-              <!-- SKU -->
               <div class="form-group">
                 <label>SKU *</label>
                 <input
@@ -319,7 +355,6 @@ const groupedValues = computed(() => {
                 <p v-if="errors.sku" class="error-text">{{ errors.sku }}</p>
               </div>
 
-              <!-- Giá & Tồn kho -->
               <div class="form-row-2">
                 <div class="form-group">
                   <label>Giá bán (VNĐ) *</label>
@@ -356,7 +391,6 @@ const groupedValues = computed(() => {
                 </div>
               </div>
 
-              <!-- Giảm giá & thời gian -->
               <div class="form-row-2">
                 <div class="form-group">
                   <label>Giảm giá (%)</label>
@@ -372,9 +406,7 @@ const groupedValues = computed(() => {
                     <span class="suffix">%</span>
                   </div>
                 </div>
-                <div class="form-group">
-                  <!-- placeholder col -->
-                </div>
+                <div class="form-group"></div>
               </div>
 
               <div class="form-row-2">
@@ -397,49 +429,72 @@ const groupedValues = computed(() => {
               </div>
             </div>
 
-            <!-- Giá trị thuộc tính -->
             <div class="card">
-              <h3 class="card-title">Giá trị thuộc tính *</h3>
-              <p
-                v-if="errors.attribute_values"
-                class="error-text"
-                style="margin-bottom: 12px"
-              >
+              <h3 class="card-title">Thiết lập Tổ hợp Thuộc tính *</h3>
+              <p v-if="errors.attribute_values" class="error-text" style="margin-bottom: 12px">
                 {{ errors.attribute_values }}
               </p>
 
-              <div
-                v-for="(values, attrName) in groupedValues"
-                :key="attrName"
-                class="attr-group"
-              >
-                <p class="attr-group-label">{{ attrName }}</p>
-                <div class="attr-values">
-                  <button
-                    v-for="val in values"
-                    :key="val.id"
-                    type="button"
-                    class="attr-chip"
-                    :class="{
-                      selected: form.attribute_values.includes(val.id),
-                    }"
-                    @click="toggleAttributeValue(val.id)"
+              <div class="value-list">
+                <div v-for="(row, index) in form.selected_attributes" :key="index" class="value-row">
+                  <div class="row-index">{{ index + 1 }}</div>
+                  
+                  <div class="row-input-wrap" style="flex-direction: row; gap: 10px; flex-wrap: wrap;">
+                    <div class="select-wrapper" style="flex: 1; min-width: 140px; max-width: 200px;">
+                      <select 
+                        class="form-control" 
+                        :class="{ 'is-error': row.error }" 
+                        v-model="row.attribute_id" 
+                        @change="row.value_ids = []" 
+                      >
+                        <option value="">-- Thuộc tính --</option>
+                        <option v-for="attr in attributeStore.attributes" :key="attr.id" :value="attr.id">
+                          {{ attr.name }}
+                        </option>
+                      </select>
+                      <svg class="dropdown-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+
+                    <div class="checkbox-container" style="flex: 2; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; min-height: 42px;">
+                      <div v-if="!row.attribute_id" style="color: #9ca3af; font-size: 13px; line-height: 24px;">
+                        Vui lòng chọn thuộc tính trước...
+                      </div>
+                      <div v-else class="checkbox-group">
+                        <label v-for="val in getValuesForAttribute(row.attribute_id)" :key="val.id" class="checkbox-label">
+                          <input type="checkbox" :value="val.id" v-model="row.value_ids" />
+                          {{ val.value }}
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <p v-if="row.error" class="error-text" style="width: 100%; margin-top: -4px;">{{ row.error }}</p>
+                  </div>
+
+                  <button 
+                    class="btn-remove" 
+                    type="button" 
+                    @click="removeAttrRow(index)" 
+                    :disabled="form.selected_attributes.length === 1" 
+                    title="Xóa dòng này"
                   >
-                    {{ val.value }}
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
               </div>
 
-              <div
-                v-if="Object.keys(groupedValues).length === 0"
-                class="empty-attr"
-              >
-                <p>Chưa có giá trị thuộc tính nào</p>
-              </div>
+              <button type="button" class="btn-add-row" @click="addAttrRow" :disabled="loading">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Thêm thuộc tính khác
+              </button>
             </div>
           </div>
 
-          <!-- Cột phải -->
           <div class="form-col-right">
             <div class="card">
               <h3 class="card-title">Hình ảnh biến thể</h3>
@@ -509,7 +564,6 @@ const groupedValues = computed(() => {
                     </svg>
                   </button>
                 </div>
-                <!-- Badge: existing vs new -->
                 <div class="image-meta">
                   <span v-if="imageFile" class="badge badge-new">
                     <svg
@@ -781,54 +835,108 @@ const groupedValues = computed(() => {
   pointer-events: none;
 }
 
-/* Attribute chips */
-.attr-group {
-  margin-bottom: 16px;
+/* GIAO DIỆN THUỘC TÍNH (UI CHECKBOX) */
+.checkbox-container {
+  background: #fff;
 }
-.attr-group:last-child {
-  margin-bottom: 0;
-}
-.attr-group-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
-}
-.attr-values {
+.checkbox-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 12px;
+  align-items: center;
 }
-.attr-chip {
-  padding: 6px 14px;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 500;
-  border: 1.5px solid #e5e7eb;
-  background: #f9fafb;
-  color: #374151;
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.18s;
+  color: #374151;
+  user-select: none;
 }
-.attr-chip:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
-  color: #2563eb;
-}
-.attr-chip.selected {
-  border-color: #2563eb;
-  background: #eff6ff;
-  color: #2563eb;
-  font-weight: 600;
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2563eb;
 }
 
-.empty-attr {
-  text-align: center;
+.value-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.value-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.row-index {
+  width: 32px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
   color: #9ca3af;
-  font-size: 14px;
-  padding: 16px 0;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.row-input-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.btn-remove {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-remove:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+.btn-remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-add-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px dashed #7dd3fc;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+.btn-add-row:hover:not(:disabled) {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+}
+.btn-add-row:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Upload */
