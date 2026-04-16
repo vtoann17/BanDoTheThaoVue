@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { ref } from "vue";
 import { useNotify } from "@/composables/useNotify";
+import { echo } from "@/utils/echo"; // Đảm bảo bạn đã tạo file này như hướng dẫn trước
 
 export const useChatStore = defineStore("chat", () => {
     const notify  = useNotify();
@@ -15,11 +16,29 @@ export const useChatStore = defineStore("chat", () => {
     const messages    = ref([]);
     const newMessage  = ref("");
     const sending     = ref(false);
-    const lastMsgId   = ref(0);
-
-    let pollInterval = null;
 
     // ─── Actions ────────────────────────────────────────────────
+    
+    /**
+     * Lắng nghe kênh Socket realtime
+     */
+    const listenRealtime = () => {
+        if (!contactId.value) return;
+
+        // Rời kênh cũ nếu có để tránh trùng lặp listener
+        echo.leaveChannel(`chat.${contactId.value}`);
+
+        echo.channel(`chat.${contactId.value}`)
+            .listen('.message.sent', (e) => {
+                // Kiểm tra nếu tin nhắn đến từ Admin thì mới push vào list 
+                // (Tin nhắn của Customer đã được xử lý bởi Optimistic UI)
+                const isExisting = messages.value.some(m => m.id === e.message.id);
+                if (!isExisting && e.message.sender === 'admin') {
+                    messages.value.push(e.message);
+                }
+            });
+    };
+
     const startChat = async () => {
         if (!chatUser.value.name.trim()) {
             notify.toastError("Vui lòng nhập tên của bạn.");
@@ -32,13 +51,14 @@ export const useChatStore = defineStore("chat", () => {
             if (res.status === 201) {
                 contactId.value   = res.data.contact_id;
                 messages.value    = [res.data.welcome];
-                lastMsgId.value   = res.data.welcome.id;
                 chatStarted.value = true;
-                startPolling();
+                
+                // Kích hoạt lắng nghe Realtime ngay khi bắt đầu
+                listenRealtime();
                 return true;
             }
         } catch (err) {
-            notify.toastError("Không thể kết nối. Vui lòng thử lại.");
+            notify.toastError("Không thể kết nối phòng chat. Vui lòng thử lại.");
             return false;
         } finally {
             chatLoading.value = false;
@@ -51,9 +71,10 @@ export const useChatStore = defineStore("chat", () => {
 
         sending.value = true;
 
-        // Optimistic UI — hiển thị ngay trước khi API phản hồi
-        const optimistic = {
-            id:         Date.now(),
+        // Optimistic UI — Hiển thị tin nhắn ngay lập tức để tạo cảm giác mượt mà
+        const optimisticId = Date.now();
+        const optimisticMsg = {
+            id:         optimisticId,
             sender:     "customer",
             message:    text,
             created_at: new Date().toLocaleTimeString("vi-VN", {
@@ -61,7 +82,8 @@ export const useChatStore = defineStore("chat", () => {
                 minute: "2-digit",
             }),
         };
-        messages.value.push(optimistic);
+        
+        messages.value.push(optimisticMsg);
         newMessage.value = "";
 
         try {
@@ -73,55 +95,31 @@ export const useChatStore = defineStore("chat", () => {
                     sender_name: chatUser.value.name,
                 }
             );
+            
             if (res.status === 201) {
-                // Thay optimistic bằng dữ liệu thật từ server
-                const idx = messages.value.findIndex((m) => m.id === optimistic.id);
-                if (idx !== -1) messages.value[idx] = res.data.data;
-                lastMsgId.value = res.data.data.id;
+                // Thay thế tin nhắn "tạm" bằng dữ liệu chính thức từ Server (có ID thật)
+                const idx = messages.value.findIndex((m) => m.id === optimisticId);
+                if (idx !== -1) {
+                    messages.value[idx] = res.data.data;
+                }
             }
         } catch {
             notify.toastError("Gửi tin nhắn thất bại.");
+            // Xóa tin nhắn khỏi danh sách nếu gửi lỗi
+            messages.value = messages.value.filter(m => m.id !== optimisticId);
         } finally {
             sending.value = false;
         }
     };
 
-    // Polling lấy tin nhắn mới từ admin mỗi 3 giây
-    const startPolling = () => {
-        pollInterval = setInterval(pollMessages, 3000);
-    };
-
-    const stopPolling = () => {
-        if (pollInterval) {
-            clearInterval(pollInterval);
-            pollInterval = null;
-        }
-    };
-
-    const pollMessages = async () => {
-        if (!contactId.value) return;
-        try {
-            const res = await axios.get(
-                `${apiBase}/chat/${contactId.value}/messages`,
-                { params: { after_id: lastMsgId.value } }
-            );
-            const adminMsgs = (res.data.data || []).filter(
-                (m) => m.sender === "admin"
-            );
-            if (adminMsgs.length > 0) {
-                messages.value.push(...adminMsgs);
-                lastMsgId.value = adminMsgs[adminMsgs.length - 1].id;
-            }
-        } catch {
-            // silent fail — không hiện toast để tránh spam
-        }
-    };
-
     const endChat = () => {
-        stopPolling();
+        // Rời kênh Socket
+        if (contactId.value) {
+            echo.leaveChannel(`chat.${contactId.value}`);
+        }
+
         chatStarted.value = false;
         contactId.value   = null;
-        lastMsgId.value   = 0;
         messages.value    = [];
         chatUser.value    = { name: "", email: "" };
     };
@@ -136,6 +134,5 @@ export const useChatStore = defineStore("chat", () => {
         startChat,
         sendMessage,
         endChat,
-        stopPolling,
     };
 });
