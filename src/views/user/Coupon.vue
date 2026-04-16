@@ -1,69 +1,185 @@
 <template>
   <div class="profile-page">
     <HeaderUser :cart-count="3" :user="user" />
-
     <main class="main-wrapper">
       <SidebarUser :active-link="activeLink" @navigate="activeLink = $event" />
-
       <section class="content">
         <div class="page-header-row">
           <div>
             <h1 class="page-title">Mã giảm giá của tôi</h1>
-            <p class="page-subtitle">Quản lý và sử dụng các ưu đãi độc quyền dành riêng cho bạn.</p>
+            <p class="page-subtitle">
+              Quản lý và sử dụng các ưu đãi độc quyền dành riêng cho bạn.
+            </p>
           </div>
           <div class="tabs-group">
-            <button class="tab-btn active">Tất cả</button>
-            <button class="tab-btn">Sắp hết hạn</button>
-            <button class="tab-btn">Đã dùng</button>
+            <button
+              v-for="tab in tabs"
+              :key="tab.value"
+              :class="['tab-btn', { active: filters.status === tab.value }]"
+              @click="changeTab(tab.value)"
+            >
+              {{ tab.label }}
+            </button>
           </div>
         </div>
 
-        <div class="voucher-grid">
-          <div class="voucher-card" v-for="(voucher, index) in vouchers" :key="index">
-            <div class="voucher-body">
-              <div class="voucher-top">
-                <div class="voucher-icon-wrap">
-                  <span v-html="voucher.svgIcon" class="voucher-icon"></span>
+        <div v-if="loading" class="loading-state">
+          <div class="spinner"></div>
+          <p>Đang tải mã giảm giá...</p>
+        </div>
+
+        <div v-else-if="store.userCoupons.length === 0" class="empty-state">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.5"
+              d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+            />
+          </svg>
+          <p>Bạn chưa có mã giảm giá nào</p>
+        </div>
+
+        <div v-else class="voucher-grid">
+          <div
+            class="voucher-card"
+            v-for="coupon in store.userCoupons"
+            :key="coupon.id"
+            :class="{ 'card-expired': isExpired(coupon) }"
+          >
+            <!-- Left tear -->
+            <div class="voucher-left">
+              <div class="voucher-icon-wrap">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                  />
+                </svg>
+              </div>
+              <div class="voucher-value">
+                {{ formatValue(coupon) }}
+              </div>
+              <div class="voucher-min" v-if="coupon.min_order_value">
+                Đơn từ {{ formatMoney(coupon.min_order_value) }}đ
+              </div>
+            </div>
+
+            <!-- Tear line -->
+            <div class="tear-line">
+              <div class="tear-dot top"></div>
+              <div class="tear-dashes"></div>
+              <div class="tear-dot bottom"></div>
+            </div>
+
+            <!-- Right content -->
+            <div class="voucher-right">
+              <div class="voucher-right-top">
+                <span class="voucher-code">{{ coupon.code }}</span>
+                <span :class="['voucher-badge', getBadgeClass(coupon)]">
+                  {{ getBadgeText(coupon) }}
+                </span>
+              </div>
+
+              <div class="voucher-meta">
+                <div
+                  class="meta-item"
+                  :class="{
+                    'text-danger': isExpiringSoon(coupon),
+                    'text-expired': isExpired(coupon),
+                  }"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {{ formatDate(coupon.end_date) }}
                 </div>
-                <span :class="['voucher-badge', voucher.badgeClass]">{{ voucher.badgeText }}</span>
+                <div class="meta-item">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                  {{ formatUsage(coupon) }}
+                </div>
               </div>
-              
-              <h3 class="voucher-code">{{ voucher.code }}</h3>
-              <p class="voucher-desc">{{ voucher.desc }}</p>
-              
-              <div :class="['voucher-date', { 'text-danger': voucher.isExpiringSoon }]">
-                <svg v-if="voucher.isExpiringSoon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                {{ voucher.date }}
-              </div>
-            </div>
 
-            <div class="voucher-footer">
-              <button class="btn-copy">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                Sao chép mã
-              </button>
-              <button class="btn-primary-small">Sử dụng ngay</button>
+              <div class="voucher-actions">
+                <button
+                  class="btn-copy"
+                  @click="copyCode(coupon.code)"
+                  :disabled="isExpired(coupon)"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Sao chép
+                </button>
+                <button
+                  class="btn-use"
+                  :disabled="isExpired(coupon)"
+                  @click="$router.push('/')"
+                >
+                  Dùng ngay
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="support-banner">
-          <div class="support-left">
-            <div class="support-icon">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-            </div>
-            <div class="support-text">
-              <h4>Bạn gặp khó khăn khi sử dụng mã?</h4>
-              <p>Xem hướng dẫn sử dụng mã giảm giá hoặc liên hệ với đội ngũ hỗ trợ của chúng tôi ngay lập tức.</p>
-            </div>
-          </div>
-          <div class="support-actions">
-            <button class="btn-outline-blue">Hướng dẫn</button>
-            <button class="btn-primary">Liên hệ hỗ trợ</button>
-          </div>
+        <div v-if="store.lastPage > 1" class="pagination">
+          <button
+            class="page-btn"
+            :disabled="store.currentPage === 1"
+            @click="changePage(store.currentPage - 1)"
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+          <button
+            v-for="page in pageNumbers"
+            :key="page"
+            :class="['page-btn', { active: page === store.currentPage }]"
+            @click="changePage(page)"
+          >
+            {{ page }}
+          </button>
+          <button
+            class="page-btn"
+            :disabled="store.currentPage === store.lastPage"
+            @click="changePage(store.currentPage + 1)"
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
         </div>
-
       </section>
     </main>
 
@@ -71,9 +187,16 @@
       <div class="footer-container">
         <div class="footer-brand">
           <div class="footer-logo">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <circle cx="12" cy="12" r="10"></circle>
-              <path d="M5.636 5.636a9 9 0 0112.728 0M12 2v20M2 12h20M5.636 18.364a9 9 0 0112.728 0"></path>
+              <path
+                d="M5.636 5.636a9 9 0 0112.728 0M12 2v20M2 12h20M5.636 18.364a9 9 0 0112.728 0"
+              ></path>
             </svg>
           </div>
           <span class="footer-name">SportGear</span>
@@ -92,338 +215,566 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import HeaderUser from '../../components/HeaderUser.vue'
-import SidebarUser from '../../components/SidebarUser.vue'
-// Khai báo các SVG Icon để dùng lại
-const iconTag = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>`;
-const iconDumbbell = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg>`; // Icon tạm thay cho tạ
-const iconTruck = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path></svg>`;
-const iconParty = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>`;
+import { ref, computed, onMounted } from "vue";
+import HeaderUser from "../../components/HeaderUser.vue";
+import SidebarUser from "../../components/SidebarUser.vue";
+import { useUserCoupons } from "../../stores/couponuser";
 
-const vouchers = ref([
-  {
-    code: 'SPORT20',
-    desc: 'Giảm 20% cho đơn hàng từ 500k',
-    date: 'Hết hạn: 31/12/2023',
-    badgeText: 'HỢP LỆ',
-    badgeClass: 'badge-valid',
-    svgIcon: iconTag,
-    isExpiringSoon: false
-  },
-  {
-    code: 'GYMRAT',
-    desc: 'Giảm 50k cho bộ sưu tập GYM',
-    date: 'Hết hạn: 15/01/2024',
-    badgeText: 'MỚI',
-    badgeClass: 'badge-new',
-    svgIcon: iconDumbbell,
-    isExpiringSoon: false
-  },
-  {
-    code: 'FREESHIP',
-    desc: 'Miễn phí vận chuyển toàn quốc',
-    date: 'Hết hạn: 24h tới',
-    badgeText: 'SẮP HẾT HẠN',
-    badgeClass: 'badge-warning',
-    svgIcon: iconTruck,
-    isExpiringSoon: true
-  },
-  {
-    code: 'WELCOME100',
-    desc: 'Giảm 100k cho thành viên mới',
-    date: 'Hết hạn: 31/12/2023',
-    badgeText: 'HỢP LỆ',
-    badgeClass: 'badge-valid',
-    svgIcon: iconParty,
-    isExpiringSoon: false
+const store = useUserCoupons();
+const activeLink = ref("coupons");
+const loading = ref(false);
+
+const tabs = [
+  { label: "Tất cả", value: "" },
+  { label: "Sắp hết hạn", value: "expiring" },
+  { label: "Đã dùng", value: "used" },
+  { label: "Đã hết hạn", value: "expired" },
+];
+
+const filters = ref({
+  status: "",
+  sort_by: "claimed_at",
+  sort_dir: "desc",
+  per_page: 10,
+  page: 1,
+});
+
+const fetchCoupons = async () => {
+  loading.value = true;
+  await store.loadUserCoupons(filters.value);
+  loading.value = false;
+};
+
+onMounted(fetchCoupons);
+
+const changeTab = (status) => {
+  filters.value.status = status;
+  filters.value.page = 1;
+  fetchCoupons();
+};
+
+const changePage = (page) => {
+  filters.value.page = page;
+  fetchCoupons();
+};
+
+const pageNumbers = computed(() => {
+  const total = store.lastPage;
+  const current = store.currentPage;
+  const delta = 2;
+  const range = [];
+  for (
+    let i = Math.max(1, current - delta);
+    i <= Math.min(total, current + delta);
+    i++
+  ) {
+    range.push(i);
   }
-]);
+  return range;
+});
+
+// Dùng end_date (field thực tế từ API), không phải expired_at
+const isExpired = (coupon) => {
+  if (!coupon.end_date) return false;
+  return new Date(coupon.end_date) < new Date();
+};
+
+const isExpiringSoon = (coupon) => {
+  if (!coupon.end_date) return false;
+  const diff = new Date(coupon.end_date) - new Date();
+  return diff > 0 && diff < 3 * 24 * 60 * 60 * 1000;
+};
+
+const getBadgeClass = (coupon) => {
+  if (!coupon.is_active || isExpired(coupon)) return "badge-expired";
+  if (isExpiringSoon(coupon)) return "badge-warning";
+  return "badge-valid";
+};
+
+const getBadgeText = (coupon) => {
+  if (!coupon.is_active || isExpired(coupon)) return "Hết hạn";
+  if (isExpiringSoon(coupon)) return "Sắp hết hạn";
+  return "Hợp lệ";
+};
+
+const formatDate = (date) => {
+  if (!date) return "Không giới hạn";
+  const d = new Date(date);
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+};
+
+const formatMoney = (val) => Number(val).toLocaleString("vi-VN");
+
+const formatValue = (coupon) => {
+  if (coupon.discount_type === "percent") {
+    return `-${Number(coupon.discount_value)}%`;
+  }
+  return `-${formatMoney(coupon.discount_value)}đ`;
+};
+
+const formatUsage = (coupon) => {
+  const used = coupon.used_count ?? 0;
+  if (!coupon.usage_limit) return `Đã dùng: ${used}`;
+  return `${used} / ${coupon.usage_limit} lượt`;
+};
+
+const copyCode = (code) => {
+  navigator.clipboard.writeText(code);
+};
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
-/* --- Global Reset & Layout Chung (Đã có từ trước) --- */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-.profile-page { font-family: 'Inter', sans-serif; background-color: #f9fafb; color: #111827; min-height: 100vh; display: flex; flex-direction: column; }
-a { text-decoration: none; }
-button { font-family: inherit; cursor: pointer; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-/* --- Header --- */
-.header { background-color: #ffffff; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
-.header-container { max-width: 1440px; margin: 0 auto; height: 72px; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand-icon { width: 36px; height: 36px; background-color: #1a73e8; color: #ffffff; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-.brand-icon svg { width: 22px; height: 22px; }
-.brand-name { font-size: 20px; font-weight: 700; color: #111827; }
-.search-box { position: relative; flex: 1; max-width: 600px; margin: 0 40px; }
-.search-input { width: 100%; padding: 10px 16px 10px 44px; border: 1px solid #e5e7eb; border-radius: 8px; background-color: #f3f4f6; font-size: 14px; outline: none; transition: all 0.2s; color: #111827; }
-.search-input:focus { background-color: #ffffff; border-color: #1a73e8; }
-.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #9ca3af; }
-.header-actions { display: flex; align-items: center; gap: 28px; }
-.cart-btn { background: none; border: none; color: #4b5563; position: relative; display: flex; align-items: center; }
-.cart-btn svg { width: 24px; height: 24px; }
-.cart-btn:hover { color: #111827; }
-.cart-badge { position: absolute; top: -6px; right: -8px; background-color: #f97316; color: #ffffff; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #ffffff; }
-.user-menu { display: flex; align-items: center; gap: 12px; padding-left: 28px; border-left: 1px solid #e5e7eb; }
-.user-text { display: flex; flex-direction: column; text-align: right; }
-.user-name { font-size: 14px; font-weight: 600; color: #111827;}
-.user-tier { font-size: 12px; color: #9ca3af; }
-.user-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.profile-page {
+  font-family: "Inter", sans-serif;
+  background-color: #f3f4f6;
+  color: #111827;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+a {
+  text-decoration: none;
+}
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
 
-/* --- Main Layout --- */
-.main-wrapper { max-width: 1440px; margin: 0 auto; padding: 40px; display: flex; gap: 40px; width: 100%; flex: 1; }
+.main-wrapper {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px;
+  display: flex;
+  gap: 40px;
+  width: 100%;
+  flex: 1;
+}
+.content {
+  flex: 1;
+  min-width: 0;
+}
 
-/* --- Sidebar --- */
-.sidebar { width: 260px; flex-shrink: 0; }
-.nav-section { margin-bottom: 32px; display: flex; flex-direction: column; gap: 4px; }
-.nav-title { font-size: 12px; font-weight: 700; color: #9ca3af; letter-spacing: 0.05em; margin-bottom: 12px; padding-left: 16px; }
-.nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #4b5563; font-size: 14px; font-weight: 500; border-radius: 8px; transition: all 0.2s; }
-.nav-link:hover { background-color: #e5e7eb; color: #111827; }
-.nav-link.active { background-color: #eff6ff; color: #1a73e8; font-weight: 600; }
-.nav-link.text-danger { color: #dc2626; }
-.nav-link.text-danger:hover { background-color: #fee2e2; }
-.nav-icon { width: 20px; height: 20px; }
-
-/* --- Content Area --- */
-.content { flex: 1; min-width: 0; max-width: 900px; }
-
-/* Header & Tabs */
+/* Header */
 .page-header-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
-.page-title { font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 8px; }
-.page-subtitle { font-size: 15px; color: #6b7280; }
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+.page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+}
 
+/* Tabs */
 .tabs-group {
   display: flex;
-  gap: 8px;
-  background-color: #ffffff;
+  gap: 6px;
+  background: #fff;
   padding: 4px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
 }
 .tab-btn {
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 7px 16px;
+  border-radius: 7px;
   border: none;
   background: transparent;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   transition: all 0.2s;
 }
-.tab-btn:hover:not(.active) { background-color: #f3f4f6; color: #111827; }
+.tab-btn:hover:not(.active) {
+  background: #f3f4f6;
+  color: #111827;
+}
 .tab-btn.active {
-  background-color: #1a73e8;
-  color: #ffffff;
+  background: #1a73e8;
+  color: #fff;
   font-weight: 600;
 }
 
-/* --- Vouchers Grid --- */
-.voucher-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-  margin-bottom: 40px;
-}
-@media (max-width: 900px) {
-  .voucher-grid { grid-template-columns: 1fr; }
-}
-
-.voucher-card {
-  background-color: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+/* Loading */
+.loading-state {
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s;
+  align-items: center;
+  gap: 16px;
+  padding: 60px 0;
+  color: #9ca3af;
 }
-.voucher-card:hover {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #1a73e8;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.voucher-body {
-  padding: 24px;
-  flex: 1;
-}
-
-.voucher-top {
+/* Empty */
+.empty-state {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 80px 0;
+  color: #9ca3af;
 }
-
-.voucher-icon-wrap {
+.empty-state svg {
   width: 48px;
   height: 48px;
-  background-color: #eff6ff;
-  color: #1a73e8;
-  border-radius: 12px;
+}
+.empty-state p {
+  font-size: 14px;
+}
+
+/* Voucher Grid */
+.voucher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+/* Voucher Card — ticket style */
+.voucher-card {
+  background: #fff;
+  border-radius: 14px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.2s, transform 0.2s;
+  position: relative;
+}
+.voucher-card:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+.voucher-card.card-expired {
+  opacity: 0.6;
+  filter: grayscale(0.3);
+}
+
+/* Left panel */
+.voucher-left {
+  width: 96px;
+  flex-shrink: 0;
+  background: linear-gradient(160deg, #1a73e8 0%, #0d5cb8 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
+  gap: 6px;
+}
+.voucher-icon-wrap {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #fff;
+  margin-bottom: 4px;
 }
-.voucher-icon :deep(svg) { width: 24px; height: 24px; }
+.voucher-icon-wrap svg {
+  width: 20px;
+  height: 20px;
+}
+.voucher-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  line-height: 1.2;
+  word-break: break-all;
+}
+.voucher-min {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+  line-height: 1.3;
+}
 
+/* Tear line */
+.tear-line {
+  width: 14px;
+  flex-shrink: 0;
+  background: #f3f4f6;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+.tear-dot {
+  width: 14px;
+  height: 14px;
+  background: #f3f4f6;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: absolute;
+}
+.tear-dot.top {
+  top: -7px;
+}
+.tear-dot.bottom {
+  bottom: -7px;
+}
+.tear-dashes {
+  flex: 1;
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #d1d5db 0px,
+    #d1d5db 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  margin: 8px 0;
+}
+
+/* Right panel */
+.voucher-right {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.voucher-right-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.voucher-code {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: 0.03em;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .voucher-badge {
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.badge-valid { background-color: #ecfdf5; color: #10b981; }
-.badge-new { background-color: #eff6ff; color: #1a73e8; }
-.badge-warning { background-color: #fffbeb; color: #f59e0b; }
-
-.voucher-code {
-  font-size: 28px;
-  font-weight: 300;
-  color: #93c5fd; /* Màu xanh nhạt mờ mờ như ảnh */
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
+.badge-valid {
+  background: #ecfdf5;
+  color: #10b981;
 }
-
-.voucher-desc {
-  font-size: 15px;
-  color: #6b7280;
-  margin-bottom: 24px;
-  height: 44px; /* Giữ độ cao cố định để bằng nhau */
+.badge-warning {
+  background: #fffbeb;
+  color: #f59e0b;
 }
-
-.voucher-date {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
+.badge-expired {
+  background: #f3f4f6;
   color: #9ca3af;
-  font-weight: 500;
 }
-.voucher-date svg { width: 16px; height: 16px; }
-.voucher-date.text-danger { color: #ef4444; }
 
-.voucher-footer {
-  padding: 16px 24px;
-  border-top: 1px dashed #e5e7eb;
+/* Meta rows */
+.voucher-meta {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 5px;
+}
+.meta-item {
+  display: flex;
   align-items: center;
-  background-color: #fafbfc;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.meta-item svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.meta-item.text-danger {
+  color: #f59e0b;
+}
+.meta-item.text-expired {
+  color: #ef4444;
 }
 
+/* Actions */
+.voucher-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: auto;
+}
 .btn-copy {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   background: none;
-  border: none;
-  color: #1a73e8;
-  font-size: 14px;
-  font-weight: 600;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 7px;
+  transition: all 0.2s;
 }
-.btn-copy svg { width: 18px; height: 18px; }
+.btn-copy:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+.btn-copy svg {
+  width: 14px;
+  height: 14px;
+}
+.btn-copy:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-.btn-primary-small {
-  background-color: #1a73e8;
-  color: #ffffff;
+.btn-use {
+  flex: 1;
+  background: #1a73e8;
+  color: #fff;
   border: none;
-  padding: 8px 20px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-use:hover:not(:disabled) {
+  background: #1557b0;
+}
+.btn-use:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 24px 0;
+}
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background-color 0.2s;
-}
-.btn-primary-small:hover { background-color: #1557b0; }
-
-/* --- Support Banner --- */
-.support-banner {
-  background-color: #eff6ff;
-  border-radius: 16px;
-  padding: 24px 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-}
-
-.support-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.support-icon {
-  width: 56px;
-  height: 56px;
-  background-color: #1a73e8;
-  color: #ffffff;
-  border-radius: 16px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-}
-.support-icon svg { width: 28px; height: 28px; }
-
-.support-text h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 4px;
-}
-.support-text p {
-  font-size: 14px;
-  color: #6b7280;
-  max-width: 400px;
-}
-
-.support-actions {
-  display: flex;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.btn-outline-blue {
-  background-color: transparent;
-  color: #1a73e8;
-  border: 1px solid #1a73e8;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
   transition: all 0.2s;
 }
-.btn-outline-blue:hover { background-color: #dbeafe; }
-
-.btn-primary {
-  background-color: #1a73e8;
-  color: #ffffff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background-color 0.2s;
+.page-btn svg {
+  width: 15px;
+  height: 15px;
 }
-.btn-primary:hover { background-color: #1557b0; }
+.page-btn:hover:not(:disabled):not(.active) {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+.page-btn.active {
+  background: #1a73e8;
+  color: #fff;
+  border-color: #1a73e8;
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-/* --- Footer --- */
-.footer { background-color: #ffffff; border-top: 1px solid #e5e7eb; padding: 24px 0; margin-top: auto; }
-.footer-container { max-width: 1440px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
-.footer-brand { display: flex; align-items: center; gap: 8px; }
-.footer-logo { width: 24px; height: 24px; background-color: #9ca3af; color: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
-.footer-logo svg { width: 14px; height: 14px; }
-.footer-name { font-size: 14px; font-weight: 700; color: #9ca3af; }
-.footer-copy { font-size: 13px; color: #9ca3af; }
-.footer-links { display: flex; gap: 24px; }
-.footer-links a { text-decoration: none; color: #4b5563; font-size: 13px; font-weight: 500; }
-.footer-links a:hover { color: #111827; }
+/* Footer */
+.footer {
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  padding: 20px 0;
+  margin-top: auto;
+}
+.footer-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.footer-logo {
+  width: 22px;
+  height: 22px;
+  background: #9ca3af;
+  color: #fff;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.footer-logo svg {
+  width: 12px;
+  height: 12px;
+}
+.footer-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+.footer-copy {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.footer-links {
+  display: flex;
+  gap: 20px;
+}
+.footer-links a {
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 500;
+}
+.footer-links a:hover {
+  color: #111827;
+}
 </style>

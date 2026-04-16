@@ -6,8 +6,10 @@ import AppFooter from "../components/AppFooter.vue";
 import { useProducts } from "@/stores/products";
 import { useCart } from "../stores/carts";
 import { useNotify } from "@/composables/useNotify";
+import { useReviews } from "../stores/reviews";
 
 const route = useRoute();
+const reviewStore = useReviews();
 const store = useProducts();
 const cartStore = useCart();
 const { toastSuccess, toastError, toastInfo } = useNotify();
@@ -27,6 +29,7 @@ const loadDetail = async (slug) => {
   loading.value = true;
   product.value = null;
   const data = await store.getProductDetail(slug);
+
   if (data) {
     product.value = data;
     attributes.value = data.attributes ?? [];
@@ -36,7 +39,20 @@ const loadDetail = async (slug) => {
       sel[attr.id] = null;
     });
     selected.value = sel;
+    const relatedParams = {
+      per_page: 5,
+      status: 1,
+    };
+
+    if (data.subcategory) {
+      relatedParams.subcategory_id = data.subcategory.id;
+    } else if (data.brand) {
+      relatedParams.brand_id = data.brand.id;
+    }
+
+    await store.loadProducts(relatedParams);
   }
+
   activeImage.value = 0;
   qty.value = 1;
   loading.value = false;
@@ -142,7 +158,6 @@ function selectedLabel(attr) {
 }
 
 const checkFavoriteStatus = async () => {
-  // PHẢI LẤY GIỐNG HÀM HANDLE FAVORITE
   const authData = localStorage.getItem("auth");
   const token = authData ? JSON.parse(authData).token : null;
 
@@ -151,8 +166,8 @@ const checkFavoriteStatus = async () => {
   try {
     const res = await fetch(`${import.meta.env.VITE_API_BASE}/favourites`, {
       headers: {
-        "Authorization": `Bearer ${token}`,
-        "Accept": "application/json"
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
       },
     });
     if (res.ok) {
@@ -165,7 +180,6 @@ const checkFavoriteStatus = async () => {
 };
 
 const handleFavorite = async () => {
-  // Lấy token đúng cách từ object "auth"
   const authData = localStorage.getItem("auth");
   const token = authData ? JSON.parse(authData).token : null;
 
@@ -183,8 +197,8 @@ const handleFavorite = async () => {
       method: isAdding ? "POST" : "DELETE",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${token}`, // Token giờ đã có giá trị thật
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: isAdding ? JSON.stringify({ product_id: product.value.id }) : null,
     });
@@ -205,10 +219,30 @@ const handleFavorite = async () => {
   }
 };
 
-// Theo dõi khi dữ liệu product về thì check liked ngay
-watch(() => product.value, (newVal) => {
-  if (newVal) checkFavoriteStatus();
-});
+const handleQtyChange = () => {
+  if (!qty.value || qty.value < 1) {
+    qty.value = 1;
+    return;
+  }
+  if (qty.value > maxQty.value) {
+    toastError(`Rất tiếc, sản phẩm này chỉ còn ${maxQty.value} trong kho!`);
+    qty.value = 1;
+  }
+};
+
+watch(
+  () => product.value,
+  (newVal) => {
+    if (newVal) {
+      checkFavoriteStatus();
+
+      reviewStore.loadReviews({
+        product_id: newVal.id,
+        per_page: 5,
+      });
+    }
+  }
+);
 
 async function addToCart() {
   if (!matchedVariant.value || matchedVariant.value.stock === 0) return;
@@ -224,9 +258,49 @@ async function addToCart() {
 const related = computed(() =>
   store.products.filter((p) => p.slug !== route.params.slug).slice(0, 4)
 );
+
 onMounted(() => {
   store.loadProducts({ per_page: 8 });
 });
+
+const avgRating = computed(() => {
+  if (!reviewStore.reviews.length) return 0;
+  const total = reviewStore.reviews.reduce(
+    (sum, r) => sum + Number(r.rating),
+    0
+  );
+  return (total / reviewStore.reviews.length).toFixed(1);
+});
+
+function getInitials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+const avatarColors = [
+  { bg: "#eff6ff", color: "#2563eb" },
+  { bg: "#fef3c7", color: "#b45309" },
+  { bg: "#f0fdf4", color: "#16a34a" },
+  { bg: "#fdf4ff", color: "#9333ea" },
+  { bg: "#fff1f2", color: "#e11d48" },
+  { bg: "#f0fdfa", color: "#0d9488" },
+];
+
+function getAvatarColor(name) {
+  if (!name) return avatarColors[0];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+  return avatarColors[hash % avatarColors.length];
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr.slice(0, 10);
+  return d.toLocaleDateString("vi-VN");
+}
 </script>
 
 <template>
@@ -280,15 +354,18 @@ onMounted(() => {
           <!-- Gallery -->
           <div class="product-gallery">
             <div class="main-image-wrap">
-              <span v-if="product.brand" class="badge-brand">{{
-                product.brand.name
-                }}</span>
+              <span v-if="product.brand" class="badge-brand">{{ product.brand.name }}</span>
               <span v-if="displayPrice.sale > 0" class="badge-sale-img">-{{ displayPrice.sale }}%</span>
               <img :src="mainSrc" :alt="product.name" class="main-img" />
             </div>
             <div v-if="imageList.length >= 1" class="thumb-row">
-              <button v-for="(img, i) in imageList" :key="i" class="thumb-btn" :class="{ active: activeImage === i }"
-                @click="activeImage = i">
+              <button
+                v-for="(img, i) in imageList"
+                :key="i"
+                class="thumb-btn"
+                :class="{ active: activeImage === i }"
+                @click="activeImage = i"
+              >
                 <img :src="img" :alt="`${product.name} ${i + 1}`" />
               </button>
             </div>
@@ -298,20 +375,18 @@ onMounted(() => {
           <div class="product-info">
             <div class="info-header">
               <div class="product-meta">
-                <span v-if="product.brand" class="meta-brand">{{
-                  product.brand.name
-                  }}</span>
+                <span v-if="product.brand" class="meta-brand">{{ product.brand.name }}</span>
                 <span v-if="product.brand && product.subcategory" class="meta-sep">·</span>
-                <span v-if="product.subcategory" class="meta-cat">{{
-                  product.subcategory.name
-                  }}</span>
+                <span v-if="product.subcategory" class="meta-cat">{{ product.subcategory.name }}</span>
               </div>
               <button class="btn-heart" :class="{ active: liked }" @click="handleFavorite">
                 <svg viewBox="0 0 24 24" width="15" height="15">
                   <path
                     d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                    :fill="liked ? '#ef4444' : 'none'" :stroke="liked ? '#ef4444' : 'currentColor'"
-                    stroke-width="1.8" />
+                    :fill="liked ? '#ef4444' : 'none'"
+                    :stroke="liked ? '#ef4444' : 'currentColor'"
+                    stroke-width="1.8"
+                  />
                 </svg>
               </button>
             </div>
@@ -320,14 +395,19 @@ onMounted(() => {
 
             <div class="rating-row">
               <div class="stars">
-                <svg v-for="i in 5" :key="i" viewBox="0 0 20 20" width="12" height="12"
-                  :fill="i <= (product.rating ?? 4) ? '#F59E0B' : '#D1D5DB'">
-                  <path
-                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                <svg
+                  v-for="i in 5"
+                  :key="i"
+                  viewBox="0 0 20 20"
+                  width="12"
+                  height="12"
+                  :fill="i <= avgRating ? '#F59E0B' : '#D1D5DB'"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                 </svg>
                 <span class="rating-num">{{ product.rating ?? "4.8" }}</span>
               </div>
-              <span class="rating-count">{{ product.reviews_count ?? 0 }} đánh giá</span>
+              <span class="rating-count">{{ reviewStore.total }} đánh giá</span>
               <template v-if="matchedVariant">
                 <span class="dot-sep">·</span>
                 <span class="sku-label">SKU: {{ matchedVariant.sku }}</span>
@@ -341,12 +421,8 @@ onMounted(() => {
             <!-- Price -->
             <div class="price-block">
               <template v-if="displayPrice.sale > 0">
-                <span class="price-sale">{{
-                  fmt(displayPrice.discounted)
-                  }}</span>
-                <span class="price-original">{{
-                  fmt(displayPrice.original)
-                  }}</span>
+                <span class="price-sale">{{ fmt(displayPrice.discounted) }}</span>
+                <span class="price-original">{{ fmt(displayPrice.original) }}</span>
                 <span class="badge-sale-inline">-{{ displayPrice.sale }}%</span>
               </template>
               <template v-else>
@@ -357,9 +433,7 @@ onMounted(() => {
             <!-- Stock -->
             <div v-if="stockStatus" class="stock-row">
               <span class="stock-dot" :class="stockStatus.cls"></span>
-              <span class="stock-label" :class="stockStatus.cls">{{
-                stockStatus.label
-                }}</span>
+              <span class="stock-label" :class="stockStatus.cls">{{ stockStatus.label }}</span>
             </div>
 
             <div class="divider"></div>
@@ -368,23 +442,34 @@ onMounted(() => {
             <div v-for="attr in attributes" :key="attr.id" class="attr-section">
               <div class="attr-header">
                 <span class="attr-name">{{ attr.name }}</span>
-                <span v-if="selectedLabel(attr)" class="attr-selected">{{
-                  selectedLabel(attr)
-                  }}</span>
+                <span v-if="selectedLabel(attr)" class="attr-selected">{{ selectedLabel(attr) }}</span>
               </div>
               <div v-if="attr.name.toLowerCase().includes('màu')" class="color-list">
-                <button v-for="val in attr.values" :key="val.id" class="color-swatch" :class="{
-                  active: selected[attr.id] === val.id,
-                  unavail: !isAvailable(attr.id, val.id),
-                }" :title="val.value" @click="selectAttr(attr.id, val.id)">
+                <button
+                  v-for="val in attr.values"
+                  :key="val.id"
+                  class="color-swatch"
+                  :class="{
+                    active: selected[attr.id] === val.id,
+                    unavail: !isAvailable(attr.id, val.id),
+                  }"
+                  :title="val.value"
+                  @click="selectAttr(attr.id, val.id)"
+                >
                   <span class="swatch-inner" :style="{ background: val.hex ?? val.color ?? val.value }"></span>
                 </button>
               </div>
               <div v-else class="size-list">
-                <button v-for="val in attr.values" :key="val.id" class="size-pill" :class="{
-                  active: selected[attr.id] === val.id,
-                  unavail: !isAvailable(attr.id, val.id),
-                }" @click="selectAttr(attr.id, val.id)">
+                <button
+                  v-for="val in attr.values"
+                  :key="val.id"
+                  class="size-pill"
+                  :class="{
+                    active: selected[attr.id] === val.id,
+                    unavail: !isAvailable(attr.id, val.id),
+                  }"
+                  @click="selectAttr(attr.id, val.id)"
+                >
                   {{ val.value }}
                 </button>
               </div>
@@ -395,31 +480,33 @@ onMounted(() => {
             <!-- Qty + CTA -->
             <div class="qty-row">
               <div class="qty-ctrl">
-                <button @click="qty > 1 ? qty-- : null" :disabled="qty <= 1">
-                  −
-                </button>
-                <span>{{ qty }}</span>
-                <button @click="qty < maxQty ? qty++ : null" :disabled="qty >= maxQty">
-                  +
-                </button>
+                <button @click="qty > 1 ? qty-- : null" :disabled="qty <= 1">−</button>
+                <input
+                  type="number"
+                  v-model.number="qty"
+                  class="qty-input"
+                  @change="handleQtyChange"
+                />
+                <button @click="qty < maxQty ? qty++ : null" :disabled="qty >= maxQty">+</button>
               </div>
-              <button class="btn-cart" :class="{ success: addedToCart }" :disabled="!matchedVariant || matchedVariant.stock === 0 || addedToCart
-                " @click="addToCart">
-                <svg v-if="!addedToCart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  width="15" height="15">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              <button
+                class="btn-cart"
+                :class="{ success: addedToCart }"
+                :disabled="!matchedVariant || matchedVariant.stock === 0 || addedToCart"
+                @click="addToCart"
+              >
+                <svg v-if="!addedToCart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15"
-                  height="15">
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 {{
                   matchedVariant && matchedVariant.stock === 0
                     ? "Hết hàng"
                     : addedToCart
-                      ? "Đã thêm!"
-                      : "Thêm vào giỏ"
+                    ? "Đã thêm!"
+                    : "Thêm vào giỏ"
                 }}
               </button>
               <button class="btn-buy">Mua ngay</button>
@@ -435,15 +522,13 @@ onMounted(() => {
               </div>
               <div class="policy-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 Đổi trả 30 ngày
               </div>
               <div class="policy-item">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 Bảo hành 2 năm
               </div>
@@ -461,14 +546,17 @@ onMounted(() => {
             <router-link to="/products" class="btn-see-all">
               Xem tất cả
               <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12">
-                <path fill-rule="evenodd"
-                  d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                  clip-rule="evenodd" />
+                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
               </svg>
             </router-link>
           </div>
           <div class="related-grid">
-            <router-link v-for="p in related" :key="p.id" :to="`/productdetail/${p.slug}`" class="rel-card">
+            <router-link
+              v-for="p in related"
+              :key="p.id"
+              :to="`/productdetail/${p.slug}`"
+              class="rel-card"
+            >
               <div class="rel-img">
                 <img :src="`${baseUrl}/storage/${p.image}`" :alt="p.name" loading="lazy" />
                 <div v-if="p.sale > 0" class="rel-badge">-{{ p.sale }}%</div>
@@ -477,15 +565,77 @@ onMounted(() => {
                 <h3 class="rel-name">{{ p.name }}</h3>
                 <div class="rel-pricing">
                   <template v-if="p.sale > 0">
-                    <span class="rel-price-sale">{{
-                      fmt(p.price * (1 - p.sale / 100))
-                      }}</span>
+                    <span class="rel-price-sale">{{ fmt(p.price * (1 - p.sale / 100)) }}</span>
                     <span class="rel-price-orig">{{ fmt(p.price) }}</span>
                   </template>
                   <span v-else class="rel-price-main">{{ fmt(p.price) }}</span>
                 </div>
               </div>
             </router-link>
+          </div>
+        </section>
+
+        <!-- REVIEWS -->
+        <section class="review-section" v-if="reviewStore.reviews.length">
+          <div class="review-section-header">
+            <div>
+              <p class="section-eyebrow">Khách hàng nói gì</p>
+              <h2 class="section-title">Đánh giá sản phẩm</h2>
+            </div>
+            <div class="review-score-card">
+              <span class="review-score-avg">{{ avgRating }}</span>
+              <div class="review-score-right">
+                <div class="review-score-stars">
+                  <svg
+                    v-for="i in 5"
+                    :key="i"
+                    viewBox="0 0 20 20"
+                    width="13"
+                    height="13"
+                    :fill="i <= Math.round(avgRating) ? '#F59E0B' : '#D1D5DB'"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </div>
+                <span class="review-score-count">{{ reviewStore.total }} đánh giá</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="review-list">
+            <div v-for="r in reviewStore.reviews" :key="r.id" class="review-item">
+              <div class="review-item-top">
+                <div
+                  class="review-avatar"
+                  :style="{ background: getAvatarColor(r.user?.name).bg, color: getAvatarColor(r.user?.name).color }"
+                >
+                  {{ getInitials(r.user?.name) }}
+                </div>
+                <div class="review-meta">
+                  <div class="review-meta-row">
+                    <span class="review-name">{{ r.user?.name }}</span>
+                    <div class="review-stars-inline">
+                      <svg
+                        v-for="i in 5"
+                        :key="i"
+                        viewBox="0 0 20 20"
+                        width="11"
+                        height="11"
+                        :fill="i <= r.rating ? '#F59E0B' : '#E5E7EB'"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      <span class="review-rating-num">{{ r.rating }}/5</span>
+                    </div>
+                  </div>
+                  <span class="review-date">{{ formatDate(r.created_at) }}</span>
+                </div>
+              </div>
+              <p class="review-comment">{{ r.comment }}</p>
+              <div v-if="r.image" class="review-img-wrap">
+                <img :src="`${baseUrl}/storage/${r.image}`" :alt="`Ảnh đánh giá`" />
+              </div>
+            </div>
           </div>
         </section>
       </template>
@@ -635,13 +785,8 @@ img {
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── BREADCRUMB ── */
@@ -917,29 +1062,13 @@ img {
   flex-shrink: 0;
 }
 
-.stock-dot.in {
-  background: var(--green);
-}
+.stock-dot.in { background: var(--green); }
+.stock-dot.low { background: var(--orange); }
+.stock-dot.out { background: var(--gray-400); }
 
-.stock-dot.low {
-  background: var(--orange);
-}
-
-.stock-dot.out {
-  background: var(--gray-400);
-}
-
-.stock-label.in {
-  color: var(--green);
-}
-
-.stock-label.low {
-  color: var(--orange);
-}
-
-.stock-label.out {
-  color: var(--gray-400);
-}
+.stock-label.in { color: var(--green); }
+.stock-label.low { color: var(--orange); }
+.stock-label.out { color: var(--gray-400); }
 
 .divider {
   height: 1px;
@@ -1081,15 +1210,25 @@ img {
   cursor: not-allowed;
 }
 
-.qty-ctrl span {
-  min-width: 32px;
+.qty-input {
+  width: 32px;
+  height: 34px;
+  border: none;
+  border-left: 1px solid var(--gray-200);
+  border-right: 1px solid var(--gray-200);
   text-align: center;
   font-size: 13px;
   font-weight: 600;
   color: var(--gray-900);
-  border-left: 1px solid var(--gray-200);
-  border-right: 1px solid var(--gray-200);
-  line-height: 34px;
+  outline: none;
+  background: transparent;
+  -moz-appearance: textfield;
+}
+
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .btn-cart {
@@ -1289,6 +1428,145 @@ img {
   text-decoration: line-through;
 }
 
+/* ── REVIEWS ── */
+.review-section {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.review-section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.review-score-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 12px 18px;
+}
+
+.review-score-avg {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--gray-900);
+  line-height: 1;
+}
+
+.review-score-right {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.review-score-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.review-score-count {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-item {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.review-item:last-child {
+  border-bottom: none;
+}
+
+.review-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 10px;
+}
+
+.review-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.review-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.review-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.review-stars-inline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.review-rating-num {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-500);
+  margin-left: 4px;
+}
+
+.review-date {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.review-comment {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.65;
+  padding-left: 47px;
+}
+
+.review-img-wrap {
+  padding-left: 47px;
+  margin-top: 10px;
+}
+
+.review-img-wrap img {
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid var(--gray-200);
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1024px) {
   .skeleton-hero {
@@ -1310,6 +1588,12 @@ img {
 
   .related-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .review-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
   }
 }
 
@@ -1333,6 +1617,20 @@ img {
 
   .related-grid {
     gap: 9px;
+  }
+
+  .review-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .review-comment {
+    padding-left: 0;
+  }
+
+  .review-img-wrap {
+    padding-left: 0;
   }
 }
 </style>

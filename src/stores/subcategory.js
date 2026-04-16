@@ -44,7 +44,7 @@ export const useSubcategories = defineStore("subcategories", () => {
 
     const createSubcategory = async (data) => {
         try {
-            const res = await axios.post(`${apiBase}/subcategories`, data, {
+            const res = await axios.post(`${apiBase}/admin/subcategories`, data, {
                 headers: authHeaders(),
             });
 
@@ -66,7 +66,7 @@ export const useSubcategories = defineStore("subcategories", () => {
 
     const updateSubcategory = async (id, data) => {
         try {
-            const res = await axios.put(`${apiBase}/subcategories/${id}`, data, {
+            const res = await axios.put(`${apiBase}/admin/subcategories/${id}`, data, {
                 headers: authHeaders(),
             });
 
@@ -96,7 +96,7 @@ export const useSubcategories = defineStore("subcategories", () => {
         if (!confirmed) return false;
 
         try {
-            const res = await axios.delete(`${apiBase}/subcategories/${id}`, {
+            const res = await axios.delete(`${apiBase}/admin/subcategories/${id}`, {
                 headers: authHeaders(),
             });
 
@@ -124,7 +124,7 @@ export const useSubcategories = defineStore("subcategories", () => {
     const loadByCategory = async (category_id) => {
         try {
             const res = await axios.get(
-                `${apiBase}/subcategories/category/${category_id}`,
+                `${apiBase}/admin/subcategories/category/${category_id}`,
                 {
                     headers: authHeaders(),
                 }

@@ -11,7 +11,7 @@ export const useVariants = defineStore("variants", () => {
   const total = ref(0);
   const currentPage = ref(1);
   const lastPage = ref(1);
-  const perPage = ref(10);
+  const perPage = ref(5);
 
   const apiBase = import.meta.env.VITE_API_BASE;
   const authHeaders = () => ({ Authorization: `Bearer ${getToken()}` });
@@ -27,7 +27,7 @@ export const useVariants = defineStore("variants", () => {
         total.value = res.data.total ?? 0;
         currentPage.value = res.data.current_page ?? 1;
         lastPage.value = res.data.last_page ?? 1;
-        perPage.value = res.data.per_page ?? 10;
+        perPage.value = res.data.per_page ?? 5;
       } else {
         variants.value = Array.isArray(res.data) ? res.data : [];
       }
@@ -48,9 +48,9 @@ export const useVariants = defineStore("variants", () => {
     }
   };
 
-  const createVariant = async (data) => {
+  const createVariant = async (data, options = {}) => {
     try {
-      const res = await axios.post(`${apiBase}/variant`, data, {
+      const res = await axios.post(`${apiBase}/admin/variant`, data, {
         headers: {
           ...authHeaders(),
           "Content-Type": "multipart/form-data",
@@ -59,11 +59,12 @@ export const useVariants = defineStore("variants", () => {
 
       if (res.status === 200 || res.status === 201) {
         variants.value.unshift(res.data.data ?? res.data);
-        notify.toastSuccess("Thêm biến thể thành công");
+        if (!options.silent) {
+          notify.toastSuccess("Thêm biến thể thành công");
+        }
         return res.data.data ?? res.data;
       }
     } catch (error) {
-      console.error(error);
       const msg = error.response?.data?.message || "Lỗi không thêm được biến thể";
       notify.toastError(msg);
       return null;
@@ -72,7 +73,7 @@ export const useVariants = defineStore("variants", () => {
 
   const updateVariant = async (id, data) => {
     try {
-      const res = await axios.post(`${apiBase}/variant/${id}`, data, {
+      const res = await axios.post(`${apiBase}/admin/variant/${id}`, data, {
         headers: authHeaders(),
       });
       if (res.status === 200) {
@@ -96,7 +97,7 @@ export const useVariants = defineStore("variants", () => {
     if (!confirmed) return false;
 
     try {
-      const res = await axios.delete(`${apiBase}/variant/${id}`, {
+      const res = await axios.delete(`${apiBase}/admin/variant/${id}`, {
         headers: authHeaders(),
       });
       if (res.status === 200) {

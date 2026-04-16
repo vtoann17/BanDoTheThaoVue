@@ -1,22 +1,30 @@
 <script setup>
-import AppHeader from "../components/AppHeader.vue"
-import AppFooter from '../components/AppFooter.vue';
+import AppHeader from "../components/AppHeader.vue";
+import AppFooter from "../components/AppFooter.vue";
 import ProductList from "../components/ProductList.vue";
-import CategoryList from '../components/CategoryList.vue'
+import CategoryList from "../components/CategoryList.vue";
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
 import AIChatbot from "@/components/Aichatbot.vue";
 
 const sports = [
-  { name: 'Chạy bộ', desc: 'Bền bỉ trên mọi cung đường.',    img: 'https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=800&q=80' },
-  { name: 'Bóng đá', desc: 'Làm chủ cuộc chơi.',              img: 'https://images.unsplash.com/photo-1551958219-acbc595e3c0e?w=800&q=80' },
-  { name: 'Bóng rổ', desc: 'Bứt phá mọi giới hạn cao độ.',   img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80' },
+  {
+    name: "Chạy bộ",
+    desc: "Bền bỉ trên mọi cung đường.",
+    img: "https://images.unsplash.com/photo-1483058712412-4245e9b90334?w=800&q=80",
+  },
+  {
+    name: "Bóng đá",
+    desc: "Làm chủ cuộc chơi.",
+    img: "https://images.unsplash.com/photo-1551958219-acbc595e3c0e?w=800&q=80",
+  },
+  {
+    name: "Bóng rổ",
+    desc: "Bứt phá mọi giới hạn cao độ.",
+    img: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&q=80",
+  },
 ];
-
-const footerStore   = ['Đồ Nam', 'Đồ Nữ', 'Trẻ em', 'Phụ kiện']
-const footerSupport = ['Trạng thái đơn hàng', 'Trả hàng', 'Vận chuyển', 'Liên hệ']
-const footerPolicy  = ['Bảo mật', 'Điều khoản', 'Cookies']
 
 const route = useRoute();
 const notify = useNotify();
@@ -31,472 +39,353 @@ onMounted(() => {
 </script>
 
 <template>
-  <AppHeader />
+  <div class="home-wrapper">
+    <AppHeader />
 
-  <!-- ── HERO ── -->
-  <section class="hero">
-    <div class="hero-inner">
-      <span class="hero-badge">Khai mạc mùa giải</span>
-      <h1 class="hero-title">
-        Thổi Bùng<br>
-        <span class="hero-title-blue">Đam Mê.</span>
-      </h1>
-      <p class="hero-sub">
-        Trang thiết bị đẳng cấp cho vận động viên hiện đại.<br>
-        Vượt qua mọi giới hạn với bộ sưu tập tối ưu hiệu<br>
-        suất mới nhất.
-      </p>
-      <div class="hero-btns">
-        <button class="btn-primary">Mua ngay Hàng mới</button>
-        <button class="btn-ghost">Xem Lookbook</button>
-      </div>
-    </div>
-  </section>
+    <section class="hero-section">
+      <img src="@/assets/thba-banner.png" class="hero-banner" />
+    </section>
 
-  <!-- ── DANH MỤC SẢN PHẨM ── -->
-  <CategoryList/>
-
-  <ProductList/>
-
-  <!-- ── MUA SẮM THEO MÔN THỂ THAO ── -->
-  <section class="section sports-section">
-    <div class="sports-head">
-      <h2 class="sports-main-title">Mua sắm theo Môn thể thao</h2>
-      <p class="sports-sub">Tìm kiếm trang phục và dụng cụ phù hợp nhất cho niềm đam mê của bạn.</p>
-    </div>
-
-    <div class="sports-grid">
-      <div v-for="s in sports" :key="s.name" class="sport-card">
-        <img :src="s.img" :alt="s.name" loading="lazy"/>
-        <div class="sport-overlay">
-          <p class="sport-name">{{ s.name }}</p>
-          <p class="sport-desc">{{ s.desc }}</p>
-          <a href="#" class="btn-explore">Khám phá ngay</a>
+    <main class="home-main">
+      <section class="home-section">
+        <div class="section-header">
+          <div class="title-wrap"></div>
         </div>
-      </div>
-    </div>
-  </section>
+        <CategoryList />
+      </section>
 
-  <AppFooter/>
-  <AIChatbot />
+      <section class="home-section1 bg-soft">
+        <div class="section-header">
+          <div class="title-wrap"></div>
+        </div>
+        <ProductList />
+      </section>
+
+      <section class="home-section">
+        <div class="section-header text-center-wrap">
+          <h2 class="section-title center">Mua sắm theo Môn thể thao</h2>
+          <p class="section-subtitle">
+            Tìm kiếm trang phục và dụng cụ phù hợp nhất cho niềm đam mê của bạn.
+          </p>
+          <div class="blue-divider center"></div>
+        </div>
+
+        <div class="sports-container">
+          <div v-for="s in sports" :key="s.name" class="sport-item">
+            <div class="sport-image">
+              <img :src="s.img" :alt="s.name" loading="lazy" />
+            </div>
+            <div class="sport-content">
+              <h3 class="sport-name">{{ s.name }}</h3>
+              <p class="sport-desc">{{ s.desc }}</p>
+              <a href="#" class="sport-link">Khám phá ngay</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <AppFooter />
+    <AIChatbot />
+  </div>
 </template>
 
 <style scoped>
-/* ── RESET ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-a { text-decoration: none; color: inherit; }
-button { font-family: inherit; cursor: pointer; border: none; }
-ul { list-style: none; }
-img { display: block; width: 100%; }
+/* ══ GLOBAL STYLE ĐỒNG BỘ PRODUCTVIEW ══ */
+.home-wrapper {
+  /* Ép phông chữ Inter chuẩn xác */
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif !important;
+  background-color: #fff;
+  color: #111827; /* Màu chữ đậm chuẩn ProductView */
+}
 
-/* ──────────────────────────────────────────────────── */
-/*  HERO                                               */
-/* ──────────────────────────────────────────────────── */
-.hero {
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ══ HERO SECTION (NÂNG CẤP) ══ */
+.hero-section {
   position: relative;
-  min-height: 480px;
-  background:
-    linear-gradient(to right, rgba(0,0,0,.78) 38%, rgba(0,0,0,.1) 72%, transparent 100%),
-    url('https://images.unsplash.com/photo-1461897104016-0b3b00cc81ee?w=1600&q=80') center / cover no-repeat;
+  min-height: 560px;
   display: flex;
   align-items: center;
-  padding: 72px 48px;
+  padding: 0 64px;
+  overflow: hidden;
 }
-
-.hero-inner { max-width: 520px; }
-
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.85) 30%,
+    rgba(0, 0, 0, 0.3) 70%,
+    transparent 100%
+  );
+  z-index: 1;
+}
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 600px;
+}
 .hero-badge {
   display: inline-block;
-  background: #FF6D00;
+  background: #ff6d00;
   color: #fff;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 6px;
   letter-spacing: 1px;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
-
 .hero-title {
-  font-size: 68px;
+  font-size: 76px;
   font-weight: 900;
-  line-height: 1.02;
+  line-height: 0.95;
   color: #fff;
   text-transform: uppercase;
-  letter-spacing: -1px;
+  letter-spacing: -2.5px;
 }
-.hero-title-blue { color: #42A5F5; }
-
-.hero-sub {
-  color: #D1D5DB;
-  font-size: 14.5px;
-  line-height: 1.7;
-  margin-top: 16px;
+.text-blue {
+  color: #42a5f5;
 }
-
-.hero-btns {
+.hero-description {
+  color: #d1d5db;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-top: 24px;
+  max-width: 480px;
+}
+.hero-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 28px;
+  gap: 16px;
+  margin-top: 40px;
 }
 
-.btn-primary {
-  background: #1565C0;
+/* ══ BUTTONS STYLE ══ */
+.btn-primary-lg {
+  background: #1565c0; /* Màu xanh chủ đạo */
   color: #fff;
-  padding: 11px 22px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background .2s;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.btn-primary:hover { background: #1251a3; }
+.btn-primary-lg:hover {
+  background: #0d47a1;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(21, 101, 192, 0.3);
+}
 
-.btn-ghost {
+.btn-outline-lg {
   background: transparent;
   color: #fff;
-  border: 2px solid #fff;
-  padding: 9px 22px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all .2s;
+  border: 2.5px solid #fff;
+  padding: 12px 32px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
 }
-.btn-ghost:hover { background: #fff; color: #111827; }
+.btn-outline-lg:hover {
+  background: #fff;
+  color: #111827;
+}
 
-/* ──────────────────────────────────────────────────── */
-/*  SECTION BASE                                        */
-/* ──────────────────────────────────────────────────── */
-.section { padding: 56px 48px; }
+/* ══ SECTION LAYOUT ══ */
+.home-main {
+  padding-bottom: 80px;
+}
+.home-section {
+  padding: 80px 64px;
+}
+.home-section1 {
+  padding: 50px 40px;
+}
+.bg-soft {
+  background-color: #f9fafb;
+} /* Màu nền xám nhạt ProductView */
 
-.section-head {
+.section-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 28px;
+  align-items: flex-end;
+  margin-bottom: 48px;
+}
+.text-center-wrap {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .section-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 32px;
+  font-weight: 800;
   color: #111827;
-  line-height: 1;
+  letter-spacing: -0.8px;
 }
-.title-bar {
-  width: 36px;
-  height: 3px;
-  background: #1565C0;
-  border-radius: 2px;
-  margin-top: 7px;
+.section-subtitle {
+  font-size: 15px;
+  color: #6b7280;
+  margin-top: 8px;
 }
-
-.see-all {
-  color: #1565C0;
-  font-size: 13.5px;
-  font-weight: 600;
-  white-space: nowrap;
+.blue-divider {
+  width: 48px;
+  height: 5px;
+  background: #1565c0;
+  border-radius: 10px;
+  margin-top: 12px;
 }
-.see-all:hover { text-decoration: underline; }
-
-/* ──────────────────────────────────────────────────── */
-/*  CATEGORIES                                          */
-/* ──────────────────────────────────────────────────── */
-.categories-section {
-  border-top: 1px solid #E5E7EB;
-  border-bottom: 1px solid #E5E7EB;
+.blue-divider.center {
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.categories-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 14px;
-}
-
-.cat-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 14px 16px;
-  background: var(--cat-bg);
-  border: 1.5px solid transparent;
-  border-radius: 14px;
-  text-align: center;
-  transition: transform .22s, box-shadow .22s, border-color .22s;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-}
-.cat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 28px rgba(0,0,0,.08);
-  border-color: var(--cat-accent);
-}
-
-.cat-icon-wrap {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #fff;
+.link-more {
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  transition: transform .22s;
-}
-.cat-card:hover .cat-icon-wrap { transform: scale(1.1); }
-
-.cat-icon {
-  font-size: 28px;
-  line-height: 1;
-  color: var(--cat-accent);
-}
-
-.cat-info { flex: 1; }
-
-.cat-name {
-  font-size: 13px;
+  gap: 6px;
+  color: #1565c0;
+  font-size: 15px;
   font-weight: 700;
-  color: #111827;
-  line-height: 1.3;
-  margin-bottom: 3px;
+  text-decoration: none;
+}
+.link-more:hover {
+  text-decoration: underline;
 }
 
-.cat-count {
-  font-size: 11px;
-  color: #6B7280;
-  font-weight: 500;
-}
-
-.cat-arrow {
-  font-size: 13px;
-  color: var(--cat-accent);
-  font-weight: 700;
-  opacity: 0;
-  transform: translateX(-4px);
-  transition: opacity .2s, transform .2s;
-}
-.cat-card:hover .cat-arrow {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-/* ──────────────────────────────────────────────────── */
-/*  PRODUCTS                                            */
-/* ──────────────────────────────────────────────────── */
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.product-card {
-  border: 1px solid #E5E7EB;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #fff;
-  transition: transform .25s, box-shadow .25s;
-  cursor: pointer;
-}
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 32px rgba(0,0,0,.09);
-}
-
-.prod-img-wrap {
-  aspect-ratio: 1 / 1;
-  background: #F3F4F6;
-  overflow: hidden;
-}
-.prod-img-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform .35s;
-}
-.product-card:hover .prod-img-wrap img { transform: scale(1.05); }
-
-.prod-body { padding: 14px 14px 14px; }
-
-.prod-cat {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #9CA3AF;
-  margin-bottom: 4px;
-}
-
-.prod-name {
-  font-size: 14.5px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.prod-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.prod-price {
-  color: #1565C0;
-  font-weight: 700;
-  font-size: 14.5px;
-}
-
-.cart-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #F3F4F6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #374151;
-  transition: background .2s, color .2s;
-}
-.cart-btn:hover { background: #1565C0; color: #fff; }
-
-/* ──────────────────────────────────────────────────── */
-/*  SPORTS                                              */
-/* ──────────────────────────────────────────────────── */
-.sports-section { padding-top: 8px; }
-
-.sports-head {
-  text-align: center;
-  margin-bottom: 28px;
-}
-
-.sports-main-title {
-  font-size: 26px;
-  font-weight: 700;
-  color: #111827;
-  margin-bottom: 8px;
-}
-
-.sports-sub {
-  font-size: 14px;
-  color: #6B7280;
-}
-
-.sports-grid {
+/* ══ SPORTS GRID (NÂNG CẤP HOVER) ══ */
+.sports-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 24px;
 }
-
-.sport-card {
+.sport-item {
   position: relative;
-  border-radius: 16px;
+  border-radius: 24px;
   overflow: hidden;
   aspect-ratio: 4 / 3;
+  border: 1px solid #e5e7eb;
   cursor: pointer;
 }
-.sport-card img {
+.sport-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform .4s;
+  transition: transform 0.7s cubic-bezier(0.2, 1, 0.3, 1);
 }
-.sport-card:hover img { transform: scale(1.06); }
+.sport-item:hover .sport-image img {
+  transform: scale(1.1);
+}
 
-.sport-overlay {
+.sport-content {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,.72) 44%, transparent 100%);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 15%,
+    transparent 100%
+  );
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 22px;
+  padding: 32px;
 }
-
 .sport-name {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   color: #fff;
-  text-transform: capitalize;
-  line-height: 1;
+  margin-bottom: 6px;
 }
-
 .sport-desc {
-  color: #D1D5DB;
-  font-size: 13px;
-  margin: 5px 0 12px;
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 20px;
+  opacity: 0.9;
 }
-
-.btn-explore {
-  display: inline-block;
+.sport-link {
   background: #fff;
   color: #111827;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 7px 16px;
-  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: 8px;
   width: fit-content;
-  transition: background .2s, color .2s;
+  text-decoration: none;
+  transition: all 0.2s;
 }
-.btn-explore:hover { background: #1565C0; color: #fff; }
+.sport-link:hover {
+  background: #1565c0;
+  color: #fff;
+}
 
-/* ──────────────────────────────────────────────────── */
-/*  PROMO BANNER                                        */
-/* ──────────────────────────────────────────────────── */
-.promo-wrap { padding: 0 48px 64px; }
-
-.promo-banner {
+/* ══ RESPONSIVE ══ */
+@media (max-width: 1200px) {
+  .hero-title {
+    font-size: 56px;
+  }
+  .hero-section,
+  .home-section {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+@media (max-width: 768px) {
+  .hero-section {
+    min-height: 480px;
+    text-align: center;
+    justify-content: center;
+  }
+  .hero-content {
+    max-width: 100%;
+  }
+  .hero-actions {
+    justify-content: center;
+    flex-direction: column;
+  }
+  .sports-container {
+    grid-template-columns: 1fr;
+  }
+  .section-title {
+    font-size: 26px;
+  }
+}
+hero-section {
   position: relative;
-  background: #FF6D00;
-  border-radius: 20px;
-  padding: 52px 64px;
+  width: 100%; 
+  height: 600px; /* Chiều cao bạn muốn */
+  padding: 0 !important; /* Quan trọng nhất: Ép bỏ lề 64px hai bên */
+  margin: 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   overflow: hidden;
 }
 
-.deco {
+.hero-banner {
   position: absolute;
-  border-radius: 50%;
-  background: rgba(255,255,255,.09);
-  pointer-events: none;
-}
-.deco1 { width: 300px; height: 300px; top: -80px; right: -60px; }
-.deco2 { width: 200px; height: 200px; bottom: -90px; right: 160px; }
-
-.promo-title {
-  font-size: 52px;
-  font-weight: 900;
-  color: #fff;
-  text-transform: uppercase;
-  line-height: 1;
-  letter-spacing: -1px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Tự động cắt cúp ảnh cho vừa khít mọi màn hình */
+  object-position: center; /* Luôn giữ trọng tâm ảnh ở giữa */
+  display: block;
 }
 
-.promo-sub {
-  color: rgba(255,255,255,.88);
-  font-size: 14px;
-  margin-top: 10px;
-  line-height: 1.65;
+.hero-overlay{
+  position: absolute;
+  inset: 0;
 }
-
-.promo-pct {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.btn-promo {
-  position: relative;
-  z-index: 1;
-  background: #fff;
-  color: #FF6D00;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 14px 32px;
-  border-radius: 10px;
-  white-space: nowrap;
-  transition: transform .2s, box-shadow .2s;
-}
-.btn-promo:hover { transform: scale(1.03); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
 </style>

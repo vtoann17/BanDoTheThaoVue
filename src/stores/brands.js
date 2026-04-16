@@ -24,7 +24,7 @@ export const useBrands = defineStore("brands", () => {
     };
     const createBrand = async (formData) => {
         try {
-            const res = await axios.post(`${apiBase}/brands`, formData, {
+            const res = await axios.post(`${apiBase}/admin/brands`, formData, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "multipart/form-data",
@@ -45,7 +45,7 @@ export const useBrands = defineStore("brands", () => {
         try {
             formData.append("_method", "PUT");
 
-            const res = await axios.post(`${apiBase}/brands/${id}`, formData, {
+            const res = await axios.post(`${apiBase}/admin/brands/${id}`, formData, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "multipart/form-data",
@@ -73,7 +73,7 @@ export const useBrands = defineStore("brands", () => {
         if (!confirmed) return false;
 
         try {
-            const res = await axios.delete(`${apiBase}/brands/${id}`, {
+            const res = await axios.delete(`${apiBase}/admin/brands/${id}`, {
                 headers: authHeaders(),
             });
 

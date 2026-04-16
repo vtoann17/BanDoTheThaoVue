@@ -107,7 +107,7 @@ export const useOrder = defineStore("order", () => {
         const notify = useNotify();
         try {
             const res = await axios.put(
-                `${apiBase}/orders/${id}`,
+                `${apiBase}/admin/orders/${id}`,
                 data,
                 { headers: authHeaders() }
             );

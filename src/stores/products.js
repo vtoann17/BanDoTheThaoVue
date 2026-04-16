@@ -12,7 +12,7 @@ export const useProducts = defineStore("products", () => {
     const total = ref(0);
     const currentPage = ref(1);
     const lastPage = ref(1);
-    const perPage = ref(10);
+    const perPage = ref(5);
 
     const apiBase = import.meta.env.VITE_API_BASE;
 
@@ -32,7 +32,7 @@ export const useProducts = defineStore("products", () => {
                 total.value = res.data.total ?? 0;
                 currentPage.value = res.data.current_page ?? 1;
                 lastPage.value = res.data.last_page ?? 1;
-                perPage.value = res.data.per_page ?? 10;
+                perPage.value = res.data.per_page ?? 5;
             } else {
                 products.value = Array.isArray(res.data) ? res.data : [];
             }
@@ -44,7 +44,7 @@ export const useProducts = defineStore("products", () => {
 
     const createProduct = async (formData) => {
         try {
-            const res = await axios.post(`${apiBase}/products`, formData, {
+            const res = await axios.post(`${apiBase}/admin/products`, formData, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "multipart/form-data",
@@ -91,7 +91,7 @@ export const useProducts = defineStore("products", () => {
         try {
             formData.append("_method", "PUT");
 
-            const res = await axios.post(`${apiBase}/products/${id}`, formData, {
+            const res = await axios.post(`${apiBase}/admin/products/${id}`, formData, {
                 headers: {
                     ...authHeaders(),
                     "Content-Type": "multipart/form-data",
@@ -122,7 +122,7 @@ export const useProducts = defineStore("products", () => {
         if (!confirmed) return false;
 
         try {
-            const res = await axios.delete(`${apiBase}/products/${id}`, {
+            const res = await axios.delete(`${apiBase}/admin/products/${id}`, {
                 headers: authHeaders(),
             });
 

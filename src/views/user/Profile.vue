@@ -1,87 +1,96 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
-import HeaderUser from '../../components/HeaderUser.vue';
-import SidebarUser from '../../components/SidebarUser.vue';
-import { useUsers } from '@/stores/users'; // Đảm bảo đúng đường dẫn đến file users.js của bạn
+import { ref, reactive, onMounted } from "vue";
+import HeaderUser from "../../components/HeaderUser.vue";
+import SidebarUser from "../../components/SidebarUser.vue";
+import { useUsers } from "@/stores/users";
 
 const userStore = useUsers();
-const activeLink = ref('Thông tin cá nhân');
+const activeLink = ref("Thông tin cá nhân");
+const isLoading = ref(true);
 
-// Thông tin người dùng hiện tại (để truyền vào Header)
 const currentUser = ref({
-  name: '',
-  avatar: '',
-  role: ''
+  name: "",
+  avatar: "",
+  role: "",
 });
 
-// Form chứa dữ liệu để chỉnh sửa
 const form = reactive({
-  name: '',
-  email: '',
-  role: '',
-  avatarFile: null
+  name: "",
+  email: "",
+  role: "",
+  avatarFile: null,
 });
 
-// Preview ảnh trước khi lưu
-const avatarPreview = ref('');
+const avatarPreview = ref("");
 
-// Lấy ID và thông tin ban đầu từ localStorage
 const getAuthData = () => {
   const auth = localStorage.getItem("auth");
   return auth ? JSON.parse(auth) : null;
 };
 
-// Hàm xử lý hiển thị URL ảnh từ server
 const getAvatarUrl = (path) => {
-  if (!path) return 'https://via.placeholder.com/150';
-  if (path.startsWith('http')) return path;
-  // Giả định backend của bạn chạy ở cổng 8000 và ảnh lưu trong storage public
-  return `${import.meta.env.VITE_API_BASE.replace('/api', '')}/storage/${path}`;
+  if (!path) return "https://via.placeholder.com/150";
+  // Nếu đã là URL đầy đủ (Google, http...) thì dùng luôn
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  // Nếu là path local thì ghép với storage
+  return `${import.meta.env.VITE_API_BASE.replace("/api", "")}/storage/${path}`;
+};
+
+const roleLabel = (role) => {
+  if (role === "admin") return "Quản trị viên";
+  return "Người dùng";
 };
 
 onMounted(async () => {
   const authData = getAuthData();
   if (authData && authData.user) {
-    const userData = await userStore.getUserById(authData.user.id); // Gọi API lấy data mới nhất
-    if (userData) {
-      currentUser.value = userData;
-      form.name = userData.name;
-      form.email = userData.email;
-      form.role = userData.role;
-      avatarPreview.value = getAvatarUrl(userData.avatar);
+    try {
+      const userData = await userStore.getUserById(authData.user.id);
+      if (userData) {
+        currentUser.value = userData;
+        form.name = userData.name || "";
+        form.email = userData.email || "";
+        form.role = userData.role || "user";
+        avatarPreview.value = getAvatarUrl(userData.avatar);
+      }
+    } catch (e) {
+      console.error("Lỗi load thông tin người dùng:", e);
     }
   }
+  isLoading.value = false;
 });
 
-// Xử lý khi chọn file ảnh mới
 const handleFileChange = (event) => {
   const file = event.target.files[0];
   if (file) {
     form.avatarFile = file;
-    avatarPreview.value = URL.createObjectURL(file); // Hiển thị ảnh tạm thời
+    avatarPreview.value = URL.createObjectURL(file);
   }
 };
 
-// Gọi API cập nhật thông tin
 const handleSave = async () => {
   const authData = getAuthData();
   if (!authData) return;
 
   const formData = new FormData();
-  formData.append('name', form.name);
-  formData.append('email', form.email);
-  formData.append('role', form.role);
+  formData.append("name", form.name);
+  formData.append("email", form.email);
+  formData.append("role", form.role);
   if (form.avatarFile) {
-    formData.append('avatar', form.avatarFile); //
+    formData.append("avatar", form.avatarFile);
   }
 
-  const result = await userStore.updateUser(authData.user.id, formData); //
+  const result = await userStore.updateUser(authData.user.id, formData);
   if (result) {
-    // Cập nhật lại giao diện sau khi thành công
     currentUser.value = result;
+    form.name = result.name;
+    form.email = result.email;
+    form.role = result.role;
+    avatarPreview.value = getAvatarUrl(result.avatar);
   }
 };
 </script>
+
 <template>
   <div class="profile-page">
     <HeaderUser :cart-count="3" :user="currentUser" />
@@ -90,59 +99,123 @@ const handleSave = async () => {
       <SidebarUser :active-link="activeLink" @navigate="activeLink = $event" />
 
       <section class="content">
-        <div class="card form-card">
+        <!-- Loading skeleton -->
+        <div v-if="isLoading" class="card form-card">
+          <div class="card-header">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-sub"></div>
+          </div>
+          <div class="card-body">
+            <div class="avatar-section">
+              <div class="skeleton skeleton-avatar"></div>
+              <div>
+                <div class="skeleton skeleton-btn"></div>
+                <div class="skeleton skeleton-hint"></div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="skeleton skeleton-input"></div>
+              <div class="skeleton skeleton-input"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nội dung thực -->
+        <div v-else class="card form-card">
           <div class="card-header">
             <h1 class="page-title">Thông tin cá nhân</h1>
-            <p class="page-subtitle">Cập nhật thông tin của bạn để quản lý tài khoản tốt hơn.</p>
+            <p class="page-subtitle">
+              Cập nhật thông tin của bạn để quản lý tài khoản tốt hơn.
+            </p>
           </div>
 
           <div class="card-body">
+            <!-- Avatar -->
             <div class="avatar-section">
               <div class="avatar-circle">
                 <img :src="avatarPreview" alt="Avatar" class="avatar-img" />
                 <label for="file-upload" class="camera-btn">
                   <svg fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.828-.414l-.828-1.242A1 1 0 0012.93 3H7.07a1 1 0 00-.828.414L5.414 4.586A1 1 0 014.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                    <path
+                      fill-rule="evenodd"
+                      d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.828-.414l-.828-1.242A1 1 0 0012.93 3H7.07a1 1 0 00-.828.414L5.414 4.586A1 1 0 014.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z"
+                      clip-rule="evenodd"
+                    ></path>
                   </svg>
                 </label>
-                <input id="file-upload" type="file" @change="handleFileChange" hidden accept="image/*" />
+                <input
+                  id="file-upload"
+                  type="file"
+                  @change="handleFileChange"
+                  hidden
+                  accept="image/*"
+                />
               </div>
               <div class="avatar-info">
-                <label for="file-upload" class="btn-change-avatar" style="cursor: pointer; display: inline-block;">
+                <label for="file-upload" class="btn-change-avatar">
                   Thay đổi ảnh
                 </label>
-                <p class="upload-hint">Định dạng JPG, PNG hoặc GIF. Dung lượng tối đa 2MB.</p>
+                <p class="upload-hint">
+                  Định dạng JPG, PNG hoặc GIF. Dung lượng tối đa 2MB.
+                </p>
               </div>
             </div>
 
+            <!-- Họ tên + Email -->
             <div class="form-grid">
               <div class="form-group">
                 <label>Họ và tên</label>
-                <input type="text" class="form-input" v-model="form.name" placeholder="Nhập họ tên" />
+                <input
+                  type="text"
+                  class="form-input"
+                  v-model="form.name"
+                  placeholder="Nhập họ tên"
+                />
               </div>
               <div class="form-group">
                 <label>Email</label>
-                <input type="email" class="form-input disabled-input" v-model="form.email" disabled />
+                <input
+                  type="email"
+                  class="form-input disabled-input"
+                  v-model="form.email"
+                  disabled
+                />
               </div>
             </div>
-
-            <div class="form-group margin-top-24">
-              <label>Vai trò hệ thống</label>
-              <div class="radio-group">
-                <label class="radio-label">
-                  <input type="radio" value="user" v-model="form.role" disabled />
-                  <span class="radio-mark"></span> Người dùng
-                </label>
-                <label class="radio-label">
-                  <input type="radio" value="staff" v-model="form.role" disabled />
-                  <span class="radio-mark"></span> Nhân viên
-                </label>
-                <label class="radio-label">
-                  <input type="radio" value="admin" v-model="form.role" disabled />
-                  <span class="radio-mark"></span> Quản trị viên
-                </label>
-              </div>
-              <p class="upload-hint" style="margin-top: 8px;">(Vai trò do hệ thống chỉ định, không thể thay đổi)</p>
+            <!-- Badge vai trò hiển thị rõ -->
+            <div class="role-badge-row">
+              <span
+                class="role-badge"
+                :class="form.role === 'admin' ? 'badge-admin' : 'badge-user'"
+              >
+                <svg
+                  v-if="form.role === 'admin'"
+                  width="14"
+                  height="14"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  width="14"
+                  height="14"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                {{ roleLabel(form.role) }}
+              </span>
             </div>
 
             <div class="form-actions">
@@ -156,20 +229,28 @@ const handleSave = async () => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 .profile-page {
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   background-color: #f9fafb;
   color: #111827;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
-a { text-decoration: none; }
-button { font-family: inherit; }
+a {
+  text-decoration: none;
+}
+button {
+  font-family: inherit;
+}
 
 .main-wrapper {
   max-width: 1440px;
@@ -181,14 +262,60 @@ button { font-family: inherit; }
   flex: 1;
 }
 
-.content { flex: 1; min-width: 0; }
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.skeleton-title {
+  height: 24px;
+  width: 200px;
+  margin-bottom: 10px;
+}
+.skeleton-sub {
+  height: 14px;
+  width: 320px;
+}
+.skeleton-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.skeleton-btn {
+  height: 34px;
+  width: 120px;
+  margin-bottom: 8px;
+}
+.skeleton-hint {
+  height: 12px;
+  width: 200px;
+}
+.skeleton-input {
+  height: 46px;
+}
 
 /* Form Card */
 .form-card {
   background-color: #ffffff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   margin-bottom: 24px;
 }
 
@@ -197,9 +324,18 @@ button { font-family: inherit; }
   border-bottom: 1px solid #e5e7eb;
 }
 
-.page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-.page-subtitle { font-size: 14px; color: #4b5563; }
-.card-body { padding: 32px; }
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.page-subtitle {
+  font-size: 14px;
+  color: #4b5563;
+}
+.card-body {
+  padding: 32px;
+}
 
 /* Avatar */
 .avatar-section {
@@ -216,9 +352,15 @@ button { font-family: inherit; }
   border-radius: 50%;
   padding: 4px;
   border: 2px solid #bfdbfe;
+  flex-shrink: 0;
 }
 
-.avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
 
 .camera-btn {
   position: absolute;
@@ -235,7 +377,10 @@ button { font-family: inherit; }
   justify-content: center;
   cursor: pointer;
 }
-.camera-btn svg { width: 14px; height: 14px; }
+.camera-btn svg {
+  width: 14px;
+  height: 14px;
+}
 
 .btn-change-avatar {
   background-color: #f3f4f6;
@@ -248,10 +393,15 @@ button { font-family: inherit; }
   cursor: pointer;
   margin-bottom: 8px;
   transition: all 0.2s;
-  display: block;
+  display: inline-block;
 }
-.btn-change-avatar:hover { background-color: #e5e7eb; }
-.upload-hint { font-size: 12px; color: #9ca3af; }
+.btn-change-avatar:hover {
+  background-color: #e5e7eb;
+}
+.upload-hint {
+  font-size: 12px;
+  color: #9ca3af;
+}
 
 /* Form Grid */
 .form-grid {
@@ -279,36 +429,37 @@ button { font-family: inherit; }
   transition: border-color 0.2s;
   color: #111827;
 }
-.form-input:focus { border-color: #1a73e8; }
-.disabled-input { background-color: #f9fafb; color: #4b5563; cursor: not-allowed; }
-
-.input-icon-wrapper { position: relative; }
-.icon-calendar {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: #9ca3af;
-  pointer-events: none;
+.form-input:focus {
+  border-color: #1a73e8;
+}
+.disabled-input {
+  background-color: #f9fafb;
+  color: #4b5563;
+  cursor: not-allowed;
 }
 
-.margin-top-24 { margin-top: 24px; }
+.margin-top-24 {
+  margin-top: 24px;
+}
 
 /* Radio */
-.radio-group { display: flex; gap: 32px; }
+.radio-group {
+  display: flex;
+  gap: 32px;
+}
 
 .radio-label {
   display: flex;
   align-items: center;
   font-size: 14px;
-  cursor: pointer;
+  cursor: not-allowed;
   color: #111827;
   font-weight: 500;
 }
 
-.radio-label input[type="radio"] { display: none; }
+.radio-label input[type="radio"] {
+  display: none;
+}
 
 .radio-mark {
   width: 20px;
@@ -322,12 +473,12 @@ button { font-family: inherit; }
 }
 
 .radio-label input[type="radio"]:checked + .radio-mark {
-border-color: #1a73e8;
+  border-color: #1a73e8;
   background-color: #1a73e8;
 }
 
 .radio-label input[type="radio"]:checked + .radio-mark::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -338,6 +489,34 @@ border-color: #1a73e8;
   border-radius: 50%;
 }
 
+/* Role badge */
+.role-badge-row {
+  margin-top: 16px;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.badge-user {
+  background-color: #eff6ff;
+  color: #1a73e8;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-admin {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+/* Actions */
 .form-actions {
   margin-top: 40px;
   display: flex;
@@ -355,63 +534,7 @@ border-color: #1a73e8;
   cursor: pointer;
   transition: background-color 0.2s;
 }
-.btn-save:hover { background-color: #1557b0; }
-
-/* Security Banner */
-.security-banner {
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 12px;
-  padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.btn-save:hover {
+  background-color: #1557b0;
 }
-
-.shield-box {
-  width: 36px;
-  height: 36px;
-  background-color: #dbeafe;
-  color: #1a73e8;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.shield-box svg { width: 20px; height: 20px; }
-
-.security-text h4 { font-size: 14px; font-weight: 700; color: #1a73e8; margin-bottom: 2px; }
-.security-text p { font-size: 13px; color: #4b5563; }
-
-/* Footer */
-.footer {
-  background-color: #ffffff;
-  border-top: 1px solid #e5e7eb;
-  padding: 24px 0;
-  margin-top: auto;
-}
-
-.footer-container {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.footer-brand { display: flex; align-items: center; gap: 8px; }
-
-.footer-logo {
-  width: 24px; height: 24px; background-color: #9ca3af; color: white;
-  border-radius: 4px; display: flex; align-items: center; justify-content: center;
-}
-.footer-logo svg { width: 14px; height: 14px; }
-.footer-name { font-size: 14px; font-weight: 700; color: #9ca3af; }
-.footer-copy { font-size: 13px; color: #9ca3af; }
-
-.footer-links { display: flex; gap: 24px; }
-.footer-links a { color: #4b5563; font-size: 13px; font-weight: 500; }
-.footer-links a:hover { color: #111827; }
 </style>
