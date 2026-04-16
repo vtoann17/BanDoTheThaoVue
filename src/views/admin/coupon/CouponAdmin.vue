@@ -12,7 +12,7 @@ const sortValue = ref("id|desc");
 const sortKey = ref("id");
 const sortDir = ref("desc");
 const currentPage = ref(1);
-const perPage = 10;
+const perPage = 5;
 
 onMounted(async () => {
   await couponStore.loadCoupons();

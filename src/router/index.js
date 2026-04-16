@@ -228,8 +228,8 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: "/order",
-      name: "order",
+      path: "/orders",
+      name: "orders",
       component: Order,
       meta: { requiresAuth: true }
     },
