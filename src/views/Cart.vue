@@ -164,7 +164,16 @@ async function checkout() {
                       >
                         <i class="bi bi-dash"></i>
                       </button>
-                      <span>{{ item.quantity }}</span>
+
+                      <input
+                        type="number"
+                        class="qty-input"
+                        :value="item.quantity"
+                        @change="
+                          cartStore.updateQty(item.id, $event.target.value)
+                        "
+                      />
+
                       <button
                         @click="cartStore.updateQty(item.id, item.quantity + 1)"
                         :disabled="item.quantity >= item.stock"
@@ -1122,5 +1131,26 @@ img {
 .attr-tag b {
   font-weight: 600;
   color: var(--blue-dark);
+}
+.qty-input {
+  width: 45px;
+  height: 30px;
+  border: none;
+  border-left: 1px solid var(--gray-200);
+  border-right: 1px solid var(--gray-200);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+  outline: none;
+  background: #fff;
+}
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qty-input {
+  -moz-appearance: textfield;
 }
 </style>

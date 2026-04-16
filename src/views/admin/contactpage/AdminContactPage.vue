@@ -1,68 +1,8 @@
 <template>
   <div class="admin-page">
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <div class="logo-icon">BT</div>
-        <span>BanDoThao Admin</span>
-      </div>
-      <nav class="sidebar-nav">
-        <a class="nav-item" href="/admin">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-          </svg>
-          Tổng quan
-        </a>
-        <a class="nav-item active" href="#">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
-            />
-          </svg>
-          Quản lý liên hệ
-          <span class="badge" v-if="store.pendingCount > 0">{{
-            store.pendingCount
-          }}</span>
-        </a>
-        <a class="nav-item" href="/admin/customers">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-          </svg>
-          Khách hàng
-        </a>
-        <a class="nav-item" href="/admin/reports">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-          Thống kê
-        </a>
-      </nav>
-    </aside>
-
+    <SidebarAdmin />
     <main class="main-content">
+       <HeaderAdmin />
       <!-- Topbar -->
       <div class="topbar">
         <div>
@@ -278,7 +218,6 @@
           <div v-else-if="store.detailLoading" class="detail-loading">
             <div class="spinner-lg"></div>
           </div>
-
           <template v-else>
             <!-- Header -->
             <div class="detail-header">
@@ -479,9 +418,25 @@
 <script setup>
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { useAdminContactStore } from "@/stores/useAdminContactStore";
+import HeaderAdmin from '../../../components/HeaderAdmin.vue'
+import SidebarAdmin from '../../../components/SidebarAdmin.vue'
 
-const API = import.meta.env.VITE_API_BASE || "/api";
-const ADMIN_API = `${API}/admin`;
+const store = useAdminContactStore();
+const threadRef = ref(null);
+let searchTimer = null;
+let statsInterval = null;
+
+const tabs = [
+  { key: "all", label: "Tất cả" },
+  { key: "form", label: "Form liên hệ" },
+  { key: "chat", label: "Chat trực tuyến" },
+];
+
+const quickReplies = [
+  "Xin chào! Tôi có thể giúp gì cho bạn?",
+  "Chúng tôi đã nhận được yêu cầu của bạn.",
+  "Cảm ơn bạn đã liên hệ!",
+];
 
 const AVATAR_COLORS = [
   { bg: "#dbeafe", color: "#1d4ed8" },
@@ -546,68 +501,6 @@ onBeforeUnmount(() => {
   color: #1e293b;
 }
 
-.sidebar {
-  width: 220px;
-  background: #0f172a;
-  display: flex;
-  flex-direction: column;
-  padding: 20px 0;
-  flex-shrink: 0;
-}
-.sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 20px 24px;
-  color: #f8fafc;
-  font-weight: 700;
-  font-size: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 12px;
-}
-.logo-icon {
-  width: 34px;
-  height: 34px;
-  background: #2563eb;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-}
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 10px;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  color: #94a3b8;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-}
-.nav-item svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #f8fafc;
-}
-.nav-item.active {
-  background: #1e3a8a;
-  color: #93c5fd;
-}
 .badge {
   margin-left: auto;
   background: #ef4444;
@@ -1030,7 +923,6 @@ onBeforeUnmount(() => {
 .danger-btn:hover {
   background: #fef2f2;
 }
-
 .info-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

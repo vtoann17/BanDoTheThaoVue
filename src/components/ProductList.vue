@@ -27,7 +27,7 @@ const toggleLike = (id) => {
         <h2 class="section-title">Hàng Mới Về</h2>
         <div class="title-bar"></div>
       </div>
-      <a href="#" class="see-all">Xem tất cả &nbsp;→</a>
+      <a href="/product" class="see-all">Xem tất cả &nbsp;→</a>
     </div>
 
     <div class="products-grid">

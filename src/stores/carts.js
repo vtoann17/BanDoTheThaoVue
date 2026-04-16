@@ -30,8 +30,8 @@ export const useCart = defineStore("cart", () => {
             items.value = data.map(item => ({
                 ...item,
                 image: item.image
-                ? item.image.replace('http://localhost', baseUrl)
-                : null,
+                    ? item.image.replace('http://localhost', baseUrl)
+                    : null,
             }));
         } catch (error) {
             notify.toastError("Không tải được giỏ hàng");
@@ -57,34 +57,49 @@ export const useCart = defineStore("cart", () => {
         }
     };
     const reOrder = async (orderId) => {
-    try {
-        const res = await axios.post(
-            `${apiBase}/orders/${orderId}/reorder`,
-            {},
-            { headers: authHeaders() }
-        );
-        if (res.status === 200) {
-            await loadCart();
-            if (res.data.out_of_stock?.length) {
-                notify.toastError(`Một số sản phẩm hết hàng: ${res.data.out_of_stock.join(', ')}`);
-            } else {
-                notify.toastSuccess(res.data.message);
+        try {
+            const res = await axios.post(
+                `${apiBase}/orders/${orderId}/reorder`,
+                {},
+                { headers: authHeaders() }
+            );
+            if (res.status === 200) {
+                await loadCart();
+                if (res.data.out_of_stock?.length) {
+                    notify.toastError(`Một số sản phẩm hết hàng: ${res.data.out_of_stock.join(', ')}`);
+                } else {
+                    notify.toastSuccess(res.data.message);
+                }
+                return true;
             }
-            return true;
+        } catch (error) {
+            const msg = error.response?.data?.message || "Không thể mua lại";
+            notify.toastError(msg);
+            return false;
         }
-    } catch (error) {
-        const msg = error.response?.data?.message || "Không thể mua lại";
-        notify.toastError(msg);
-        return false;
-    }
-};
+    };
+
 
     const updateQty = async (cartId, quantity) => {
-        if (quantity < 1) return;
+        const item = items.value.find((i) => i.id === cartId);
+        if (!item) return;
+        let finalQty = parseInt(quantity);
+        if (isNaN(finalQty) || finalQty < 1) {
+            finalQty = 1;
+        }
+        if (finalQty > item.stock) {
+            notify.toastError(`Rất tiếc, sản phẩm này chỉ còn ${item.stock} sản phẩm trong kho!`);
+            finalQty = 1;
+        }
+        if (finalQty === item.quantity) {
+            const idx = items.value.findIndex((i) => i.id === cartId);
+            items.value[idx] = { ...items.value[idx] };
+            return;
+        }
         try {
             const res = await axios.put(
                 `${apiBase}/cart/${cartId}`,
-                { quantity },
+                { quantity: finalQty },
                 { headers: authHeaders() }
             );
             if (res.status === 200) {
@@ -92,7 +107,7 @@ export const useCart = defineStore("cart", () => {
                 if (idx !== -1) {
                     items.value[idx] = {
                         ...items.value[idx],
-                        quantity,
+                        quantity: finalQty,
                     };
                     notify.toastSuccess("Đã cập nhật số lượng");
                 }
@@ -102,7 +117,6 @@ export const useCart = defineStore("cart", () => {
             notify.toastError(msg);
         }
     };
-
     const removeItem = async (cartId) => {
         try {
             const res = await axios.delete(`${apiBase}/cart/${cartId}`, {
