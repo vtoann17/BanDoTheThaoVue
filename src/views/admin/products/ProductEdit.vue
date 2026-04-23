@@ -318,7 +318,7 @@ async function submitForm() {
                     class="form-control"
                     :class="{ 'is-error': errors.price }"
                     placeholder="0"
-                    v-model="form.price"
+                    v-model="form.price" min="0"
                   />
                   <span class="suffix">đ</span>
                 </div>

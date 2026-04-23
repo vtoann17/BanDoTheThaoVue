@@ -278,7 +278,7 @@ function resetForm() {
                     class="form-control"
                     :class="{ 'is-error': errors.price }"
                     placeholder="0"
-                    v-model="form.price"
+                    v-model="form.price" min="0"
                   />
                   <span class="suffix">đ</span>
                 </div>
@@ -293,7 +293,7 @@ function resetForm() {
                     class="form-control"
                     :class="{ 'is-error': errors.stock }"
                     placeholder="0"
-                    v-model="form.stock"
+                    v-model="form.stock" min="0"
                   />
                   <span class="suffix">sp</span>
                 </div>
