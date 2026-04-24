@@ -7,6 +7,7 @@ import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { useNotify } from "@/composables/useNotify";
 import AIChatbot from "@/components/Aichatbot.vue";
+import LiveChat from "@/components/LiveChat.vue";
 
 const sports = [
   {
@@ -58,7 +59,7 @@ onMounted(() => {
         <div class="section-header">
           <div class="title-wrap"></div>
         </div>
-        <ProductList />
+        <ProductList :per-page="4" />
       </section>
 
       <section class="home-section">
@@ -87,6 +88,7 @@ onMounted(() => {
 
     <AppFooter />
     <AIChatbot />
+    <LiveChat /> 
   </div>
 </template>
 
@@ -388,4 +390,5 @@ hero-section {
   position: absolute;
   inset: 0;
 }
+
 </style>

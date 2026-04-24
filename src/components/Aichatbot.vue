@@ -7,10 +7,12 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
 const open     = ref(false)
 const loading  = ref(false)
 const input    = ref('')
+
+// Cập nhật câu chào để hướng dẫn người dùng tìm theo giá
 const messages = ref([
   {
     role: 'assistant',
-    content: 'Xin chào! Tôi có thể giúp bạn tìm sản phẩm theo tên, thương hiệu hoặc danh mục. Thử hỏi tôi nhé!',
+    content: 'Xin chào! Tôi có thể giúp bạn tìm sản phẩm theo tên, thương hiệu, hoặc mức giá. Thử hỏi "Tìm giày dưới 500k" xem sao nhé!',
     products: []
   }
 ])
@@ -69,7 +71,9 @@ function imgSrc(img) {
   if (!img) return 'https://placehold.co/64x64?text=No+img'
   if (img.startsWith('http')) return img
   const storageUrl = import.meta.env.VITE_STORAGE_URL || 'http://localhost:8000'
-  return `${storageUrl}/storage/${img}`
+  let cleanPath = img.replace(/^\/?storage\//, '')
+  cleanPath = cleanPath.replace(/^\//, '')
+  return `${storageUrl}/${cleanPath}`
 }
 
 function clickSuggestion(s) {
@@ -77,7 +81,13 @@ function clickSuggestion(s) {
   send()
 }
 
-const suggestions = ['Giày chạy bộ', 'Áo bóng đá', 'Phụ kiện gym', 'Bóng rổ Nike']
+// Cập nhật các gợi ý để test chức năng tìm theo giá
+const suggestions = [
+  'Giày chạy bộ', 
+  'Giày dưới 500k', 
+  'Sản phẩm từ 1 đến 2 triệu', 
+  'Áo bóng đá'
+]
 </script>
 
 <template>
@@ -94,7 +104,7 @@ const suggestions = ['Giày chạy bộ', 'Áo bóng đá', 'Phụ kiện gym', 
         <div class="chat-header-info">
           <div class="chat-avatar">S</div>
           <div>
-            <p class="chat-name">SportBot</p>
+            <p class="chat-name">THBA ChatBot</p>
             <p class="chat-status">Trực tuyến</p>
           </div>
         </div>
