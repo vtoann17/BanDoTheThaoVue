@@ -9,12 +9,11 @@ export const useAdminContactStore = defineStore("adminContact", () => {
 
     const getToken = () =>
         JSON.parse(localStorage.getItem("auth") || "{}")?.token ?? null;
-
     const authHeaders = () => ({
         Authorization: `Bearer ${getToken()}`,
+        "X-Socket-ID": window.Echo?.socketId() ?? "",
     });
 
-    // ─── State ──────────────────────────────────────────────────
     const contacts        = ref([]);
     const selectedContact = ref(null);
     const loading         = ref(false);
@@ -37,24 +36,60 @@ export const useAdminContactStore = defineStore("adminContact", () => {
         last_page:    1,
     });
 
-    // Filters
     const activeTab    = ref("all");
     const filterStatus = ref("");
     const filterTopic  = ref("");
     const searchQuery  = ref("");
-
-    // Reply
     const replyText    = ref("");
     const sendEmail    = ref(true);
     const markResolved = ref(false);
     const replying     = ref(false);
-
-    // ─── Computed ───────────────────────────────────────────────
     const pendingCount = computed(() => stats.value.pending);
 
-    // ─── Actions ────────────────────────────────────────────────
+    const listenAdminChannel = () => {
+        if (!window.Echo) {
+            setTimeout(listenAdminChannel, 300);
+            return;
+        }
+
+        window.Echo.channel("admin.chat")
+            .listen(".new.message", (e) => {
+                const idx = contacts.value.findIndex(c => c.id === e.contact_id);
+                if (idx !== -1) {
+                    contacts.value[idx].last_message = e.message;
+                    contacts.value[idx].last_time    = "vừa xong";
+                    if (e.sender === "customer") {
+                        contacts.value[idx].unread_count =
+                            (contacts.value[idx].unread_count || 0) + 1;
+                    }
+                } else {
+                    loadContacts();
+                }
+            });
+    };
+
+    const listenContactChannel = (contactId) => {
+        if (!window.Echo) return;
+
+        window.Echo.leave(`chat.${contactId}`);
+
+        window.Echo.channel(`chat.${contactId}`)
+            .listen(".new.message", (e) => {
+                if (!selectedContact.value) return;
+                if (selectedContact.value.id !== contactId) return;
+                if (e.sender === "admin") return;
+
+                if (!selectedContact.value.chat_messages) {
+                    selectedContact.value.chat_messages = [];
+                }
+
+                selectedContact.value.chat_messages.push(e);
+            });
+    };
+
     const loadContacts = async () => {
         loading.value = true;
+
         try {
             const params = {
                 page:     meta.value.current_page,
@@ -89,7 +124,6 @@ export const useAdminContactStore = defineStore("adminContact", () => {
             });
 
             stats.value = res.data.data;
-
         } catch {}
     };
 
@@ -106,9 +140,13 @@ export const useAdminContactStore = defineStore("adminContact", () => {
 
             selectedContact.value = res.data.data;
 
-            // đánh dấu đã đọc
+            listenContactChannel(contact.id);
+
             const idx = contacts.value.findIndex(c => c.id === contact.id);
-            if (idx !== -1) contacts.value[idx].is_read = true;
+            if (idx !== -1) {
+                contacts.value[idx].is_read      = true;
+                contacts.value[idx].unread_count = 0;
+            }
 
         } catch {
             selectedContact.value = contact;
@@ -121,62 +159,61 @@ export const useAdminContactStore = defineStore("adminContact", () => {
     const updateStatus = async (newStatus) => {
         if (!selectedContact.value) return;
 
+        const contactId = selectedContact.value.id;
+        const oldStatus = selectedContact.value.status;
+
+        selectedContact.value.status = newStatus;
+
+        const idx = contacts.value.findIndex(c => c.id === contactId);
+        if (idx !== -1) {
+            contacts.value[idx].status = newStatus;
+
+            const labelMap = {
+                pending:     "Chờ xử lý",
+                in_progress: "Đang xử lý",
+                resolved:    "Đã giải quyết",
+            };
+            contacts.value[idx].status_label = labelMap[newStatus] ?? newStatus;
+        }
+
         try {
-            const res = await axios.patch(
-                `${apiBase}/admin/contacts/${selectedContact.value.id}/status`,
+            await axios.patch(
+                `${apiBase}/admin/contacts/${contactId}/status`,
                 { status: newStatus },
                 { headers: authHeaders() }
             );
 
-            if (res.status === 200) {
-                selectedContact.value.status = newStatus;
-
-                const idx = contacts.value.findIndex(
-                    c => c.id === selectedContact.value.id
-                );
-
-                if (idx !== -1) {
-                    contacts.value[idx].status = newStatus;
-                }
-
-                notify.toastSuccess("Đã cập nhật trạng thái.");
-                await loadStats();
-            }
+            notify.toastSuccess("Đã cập nhật trạng thái.");
+            loadStats();
 
         } catch {
-            notify.toastError("Không thể cập nhật trạng thái.");
+            selectedContact.value.status = oldStatus;
+            if (idx !== -1) contacts.value[idx].status = oldStatus;
+            notify.toastError("Không cập nhật được trạng thái.");
         }
     };
 
     const deleteContact = async () => {
         if (!selectedContact.value) return;
 
-        const confirmed = await notify.swalConfirm(
-            "Xóa liên hệ?",
-            `Bạn chắc chắn muốn xóa liên hệ của "${selectedContact.value.name}"?`
-        );
+        if (!confirm("Bạn có chắc muốn xoá liên hệ này không?")) return;
 
-        if (!confirmed) return;
+        const contactId = selectedContact.value.id;
 
         try {
-            const idToRemove = selectedContact.value.id;
-
             await axios.delete(
-                `${apiBase}/admin/contacts/${idToRemove}`,
+                `${apiBase}/admin/contacts/${contactId}`,
                 { headers: authHeaders() }
             );
 
-            contacts.value = contacts.value.filter(
-                c => c.id !== idToRemove
-            );
-
+            contacts.value    = contacts.value.filter(c => c.id !== contactId);
             selectedContact.value = null;
 
-            notify.toastSuccess("Đã xóa liên hệ.");
-            await loadStats();
+            notify.toastSuccess("Đã xoá liên hệ.");
+            loadStats();
 
         } catch {
-            notify.toastError("Không thể xóa liên hệ.");
+            notify.toastError("Không xoá được liên hệ.");
         }
     };
 
@@ -185,14 +222,33 @@ export const useAdminContactStore = defineStore("adminContact", () => {
 
         replying.value = true;
 
-        const currentContactId = selectedContact.value.id;
-        const messageContent   = replyText.value;
+        const contactId = selectedContact.value.id;
+        const message   = replyText.value;
+        if (!selectedContact.value.chat_messages) {
+            selectedContact.value.chat_messages = [];
+        }
+
+        const optimisticId = `pending_${Date.now()}`;
+
+        selectedContact.value.chat_messages.push({
+            id:          optimisticId,
+            contact_id:  contactId,
+            sender:      "admin",
+            sender_name: "Admin BanDoThao",
+            message:     message,
+            created_at:  new Date().toLocaleTimeString("vi-VN", {
+                hour: "2-digit", minute: "2-digit",
+            }),
+            _pending: true,
+        });
+
+        replyText.value = "";
 
         try {
             const res = await axios.post(
-                `${apiBase}/admin/contacts/${currentContactId}/reply`,
+                `${apiBase}/admin/contacts/${contactId}/reply`,
                 {
-                    message:       messageContent,
+                    message,
                     send_email:    sendEmail.value,
                     mark_resolved: markResolved.value,
                     admin_name:    "Admin BanDoThao",
@@ -200,52 +256,44 @@ export const useAdminContactStore = defineStore("adminContact", () => {
                 { headers: authHeaders() }
             );
 
-            if (res.status === 200) {
+            const idx = selectedContact.value.chat_messages.findIndex(
+                m => m.id === optimisticId
+            );
 
-                if (!selectedContact.value.chat_messages) {
-                    selectedContact.value.chat_messages = [];
-                }
-
-                selectedContact.value.chat_messages.push(
-                    res.data.data.chat_message || {
-                        id: Date.now(),
-                        sender: "admin",
-                        sender_name: "Admin BanDoThao",
-                        message: messageContent,
-                        time_ago: "vừa xong",
-                    }
-                );
-
-                if (markResolved.value) {
-                    selectedContact.value.status = "resolved";
-
-                    const idx = contacts.value.findIndex(
-                        c => c.id === currentContactId
-                    );
-
-                    if (idx !== -1) {
-                        contacts.value[idx].status = "resolved";
-                    }
-                }
-
-                const emailNote = res.data.data?.email_sent
-                    ? " Email đã được gửi."
-                    : "";
-
-                notify.toastSuccess("Đã gửi phản hồi." + emailNote);
-
-                replyText.value = "";
-                await loadStats();
-
-                return true;
+            if (idx !== -1) {
+                selectedContact.value.chat_messages[idx] = {
+                    id:          res.data.data.message_id,
+                    contact_id:  contactId,
+                    sender:      "admin",
+                    sender_name: "Admin BanDoThao",
+                    message:     message,
+                    created_at:  new Date().toLocaleTimeString("vi-VN", {
+                        hour: "2-digit", minute: "2-digit",
+                    }),
+                };
             }
 
-        } catch (err) {
-            const msg =
-                err.response?.data?.message ||
-                "Có lỗi khi gửi phản hồi.";
+            if (markResolved.value) {
+                selectedContact.value.status = "resolved";
+                const cidx = contacts.value.findIndex(c => c.id === contactId);
+                if (cidx !== -1) {
+                    contacts.value[cidx].status       = "resolved";
+                    contacts.value[cidx].status_label = "Đã giải quyết";
+                }
+                loadStats();
+            }
 
-            notify.toastError(msg);
+            return true;
+
+        } catch (err) {
+            selectedContact.value.chat_messages =
+                selectedContact.value.chat_messages.filter(
+                    m => m.id !== optimisticId
+                );
+
+            notify.toastError(
+                err.response?.data?.message || "Có lỗi khi gửi phản hồi."
+            );
             return false;
 
         } finally {
@@ -253,7 +301,6 @@ export const useAdminContactStore = defineStore("adminContact", () => {
         }
     };
 
-    // ─── Helpers ────────────────────────────────────────────────
     const setTab = (key) => {
         activeTab.value         = key;
         meta.value.current_page = 1;
@@ -270,6 +317,8 @@ export const useAdminContactStore = defineStore("adminContact", () => {
         markResolved.value = false;
         sendEmail.value    = true;
     };
+
+    listenAdminChannel();
 
     return {
         contacts,

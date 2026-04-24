@@ -104,7 +104,7 @@ const suggestions = [
         <div class="chat-header-info">
           <div class="chat-avatar">S</div>
           <div>
-            <p class="chat-name">SportBot</p>
+            <p class="chat-name">THBA ChatBot</p>
             <p class="chat-status">Trực tuyến</p>
           </div>
         </div>
